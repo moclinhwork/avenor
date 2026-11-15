@@ -102,9 +102,26 @@ function parseDate(s) {
       let [dd, mm] = [+dmyM[1], +dmyM[2]];
       if (mm > 12 && dd <= 12) [dd, mm] = [mm, dd];
       d = new Date(Date.UTC(+dmyM[3], mm - 1, dd, +(dmyM[4] || 0), +(dmyM[5] || 0)));
-    } else d = new Date(t);
+    } else d = genericDate(t);
   }
   return !d || Number.isNaN(d.getTime()) ? null : iso(d);
+}
+
+// Ngày viết theo ngôn ngữ khác, ví dụ "15 thg 11, 2026, 10:05:10 CH" hay "15 tháng 11 2026 22:05".
+function genericDate(t) {
+  const nums = (t.match(/\d+/g) || []).map(Number);
+  const yi = nums.findIndex((n) => n >= 1900 && n <= 2100);
+  if (yi < 0) { const d = new Date(t); return Number.isNaN(d.getTime()) ? null : d; }
+  let y = nums[yi], dd, mm, rest;
+  if (yi >= 2) { [dd, mm] = [nums[yi - 2], nums[yi - 1]]; rest = nums.slice(yi + 1); }
+  else if (yi === 0 && nums.length >= 3) { [mm, dd] = [nums[1], nums[2]]; rest = nums.slice(3); }
+  else return null;
+  if (mm > 12 && dd <= 12) [dd, mm] = [mm, dd];
+  if (!(mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31)) return null;
+  let [hh = 0, mi = 0, ss = 0] = rest;
+  if (/\b(PM|CH|chiều|tối)\b/i.test(t) && hh < 12) hh += 12;
+  if (/\b(AM|SA|sáng)\b/i.test(t) && hh === 12) hh = 0;
+  return new Date(Date.UTC(y, mm - 1, dd, hh, mi, ss));
 }
 
 // "5123.4", "5,123.4", "5123,4", "5.123,4" → số.
@@ -123,8 +140,8 @@ const HEAD = {
   date: /(activity date|date|ngày|datum|fecha|data)/i,
   name: /(activity name|name|tên|nom|nombre|nome)/i,
   type: /(activity type|type|loại|typ|tipo|sport)/i,
-  elapsed: /(elapsed time|elapsed|thời gian trôi qua|temps écoulé|verstrichene|tiempo transcurrido)/i,
-  moving: /(moving time|thời gian di chuyển|temps de déplacement|bewegungszeit|tiempo en movimiento)/i,
+  elapsed: /(elapsed time|elapsed|thời gian thực tế|thời gian trôi qua|thời gian trôi qua|temps écoulé|verstrichene|tiempo transcurrido)/i,
+  moving: /(moving time|thời gian di chuyển|thời gian vận động|thời gian di chuyển|temps de déplacement|bewegungszeit|tiempo en movimiento)/i,
   distance: /(distance|quãng đường|khoảng cách|distanz|distancia|distanza)/i,
 };
 
@@ -158,7 +175,7 @@ export function workoutsFromCsv(text) {
     const id = iId >= 0 && r[iId] ? r[iId] : `${date}-${type}-${km}-${secs}`;
     out.push({ id: `strava-${id}`, date, type, km, minutes: Math.round(secs / 60), name: r[iName] || sportOf(type).label, source: 'strava', sport: String(r[iType] || '').trim() });
   }
-  if (!out.length) throw new ImportError(`Không đọc được hoạt động nào trong ${rows.length - 1} dòng. Các cột đầu: "${head.slice(0, 8).join(' | ')}". Hãy gửi dòng này cho Claude để chỉnh.`);
+  if (!out.length) throw new ImportError(`Không đọc được hoạt động nào trong ${rows.length - 1} dòng. Các cột đầu: "${head.slice(0, 8).join(' | ')}". Ngày ở dòng đầu: "${rows[1]?.[iDate] ?? ''}". Hãy gửi dòng này cho Claude để chỉnh.`);
   return { workouts: out, skipped };
 }
 
