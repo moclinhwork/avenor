@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Cài hoặc cập nhật Avenor trên Ubuntu. Chạy bằng root:
-#   bash <(curl -fsSL https://raw.githubusercontent.com/<owner>/avenor/main/deploy/install.sh) <git-url>
+# Cài hoặc cập nhật Avenor trên Ubuntu (chạy bằng root):
+#   bash install.sh [git-url]
+# Nếu VPS đã có Caddy chạy sẵn (systemd), app chạy sau Caddy đó; nếu không, dùng Caddy trong Docker.
 set -euo pipefail
 REPO="${1:-https://github.com/moclinhwork/avenor.git}"
 DIR=/opt/avenor
@@ -17,25 +18,34 @@ if [ -d "$DIR/.git" ]; then
   echo "==> Cập nhật mã nguồn"
   git -C "$DIR" pull --ff-only
 else
-  [ -n "$REPO" ] || { echo "Thiếu địa chỉ repo git"; exit 1; }
   echo "==> Tải mã nguồn"
   git clone "$REPO" "$DIR"
 fi
 cd "$DIR"
 [ -f .env ] || cp .env.example .env
+grep -q '^APP_PORT=' .env || echo 'APP_PORT=8120' >> .env
 mkdir -p data && chown 1000:1000 data
+set -a; . ./.env; set +a
 
-echo "==> Kiểm tra cổng 80/443"
-if ss -ltnp | grep -E ':(80|443)\s' | grep -v docker-proxy; then
-  echo "!! Cổng 80 hoặc 443 đang được chương trình khác dùng (xem dòng trên). Dừng lại để tránh ảnh hưởng trang khác."
-  exit 2
+if systemctl is-active --quiet caddy; then
+  echo "==> Dùng Caddy có sẵn trên VPS, app ở 127.0.0.1:$APP_PORT"
+  docker compose -f deploy/compose.app-only.yml --env-file .env -p avenor up -d --build
+  CF=/etc/caddy/Caddyfile
+  if ! grep -q "^$DOMAIN {" "$CF"; then
+    cp "$CF" "$CF.bak-avenor-$(date +%Y%m%d%H%M%S)"
+    printf '\n%s {\n\tencode gzip\n\theader -Server\n\trequest_body {\n\t\tmax_size 10MB\n\t}\n\treverse_proxy 127.0.0.1:%s\n}\n' "$DOMAIN" "$APP_PORT" >> "$CF"
+    echo "==> Đã thêm $DOMAIN vào $CF (bản cũ lưu ở $CF.bak-avenor-*)"
+  fi
+  caddy validate --config "$CF" --adapter caddyfile
+  systemctl reload caddy
+else
+  echo "==> Kiểm tra cổng 80/443"
+  if ss -ltnp | grep -E ':(80|443)\s' | grep -v docker-proxy; then
+    echo "!! Cổng 80 hoặc 443 đang được chương trình khác dùng. Dừng lại để tránh ảnh hưởng trang khác."
+    exit 2
+  fi
+  docker compose -p avenor up -d --build
 fi
-if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
-  ufw allow 80/tcp; ufw allow 443/tcp
-fi
-
-echo "==> Build và chạy"
-docker compose up -d --build
 sleep 5
-docker compose ps
-echo "==> Xong. Mở https://$(grep ^DOMAIN= .env | cut -d= -f2)"
+docker ps --filter name=avenor
+echo "==> Xong. Mở https://$DOMAIN"

@@ -1,0 +1,12 @@
+# Dùng khi VPS đã có Caddy/Nginx riêng: app chỉ mở cổng nội bộ 127.0.0.1:${APP_PORT}.
+services:
+  app:
+    build: ..
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      PUBLIC_URL: https://${DOMAIN}
+    volumes:
+      - ../data:/data
+    ports:
+      - "127.0.0.1:${APP_PORT:-8120}:3000"

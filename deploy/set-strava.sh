@@ -5,5 +5,5 @@ set -euo pipefail
 cd /opt/avenor
 [ $# -eq 2 ] || { echo "Cách dùng: bash deploy/set-strava.sh <client-id> <client-secret>"; exit 1; }
 sed -i "s/^STRAVA_CLIENT_ID=.*/STRAVA_CLIENT_ID=$1/; s/^STRAVA_CLIENT_SECRET=.*/STRAVA_CLIENT_SECRET=$2/" .env
-docker compose up -d
+bash /opt/avenor/deploy/install.sh
 echo "Đã cập nhật Strava."

@@ -58,7 +58,7 @@ Cài lần đầu trên Ubuntu (chạy bằng root):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/moclinhwork/avenor/main/deploy/install.sh | bash -s https://github.com/moclinhwork/avenor.git
 ```
-Cập nhật phiên bản mới: chạy lại `bash /opt/avenor/deploy/install.sh`.
+Cập nhật phiên bản mới: `cd /opt/avenor; git pull; bash deploy/install.sh`. Nếu VPS đã có Caddy (systemd), script tự chạy app ở 127.0.0.1:8120 và thêm tên miền vào /etc/caddy/Caddyfile (có bản sao lưu).
 
 Cấu hình ở `/opt/avenor/.env` (xem `.env.example`), sửa xong chạy `docker compose up -d` trong `/opt/avenor`.
 - `DOMAIN`: tên miền đã trỏ về VPS; Caddy tự cấp HTTPS.
