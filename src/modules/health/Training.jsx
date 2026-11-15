@@ -5,6 +5,7 @@ import { BarChart } from '../../ui/charts.jsx';
 import Icon from '../../ui/Icon.jsx';
 import { errorText, fetchStrava, stravaAvailable, stravaConnect, stravaDisconnect } from './strava.js';
 import { SERVER } from '../../core/platform.js';
+import { ImportError, importStravaFile } from './stravaImport.js';
 
 const TYPES = { walk: { label: 'Đi bộ', color: 'var(--lav)', icon: 'pin' }, run: { label: 'Chạy bộ', color: 'var(--mint)', icon: 'bolt' } };
 const sumKm = (list) => list.reduce((s, w) => s + (w.km || 0), 0);
@@ -18,6 +19,28 @@ export default function Training({ h, set, notify }) {
   const [hasMcp, setHasMcp] = useState(null);
   const [form, setForm] = useState({ date: todayIso, type: 'walk', km: '', minutes: '' });
   const auto = useRef(false);
+  const fileRef = useRef(null);
+  const [importing, setImporting] = useState(false);
+
+  const importFile = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file) return;
+    setImporting(true); setErr('');
+    try {
+      const { workouts: got, skipped } = await importStravaFile(file);
+      if (!got.length) throw new ImportError('Không có buổi đi bộ hay chạy bộ nào trong file.');
+      let added = 0;
+      set((s) => {
+        const map = new Map((s.workouts || []).filter((w) => w.source !== 'sample').map((w) => [w.id, w]));
+        got.forEach((w) => { if (!map.has(w.id)) added++; map.set(w.id, w); });
+        return { ...s, workouts: [...map.values()], stravaImportedAt: new Date().toISOString() };
+      });
+      notify(`Đã nhập ${got.length} buổi đi bộ/chạy bộ từ file Strava${skipped ? ` (bỏ qua ${skipped} hoạt động khác)` : ''}`);
+    } catch (x) {
+      setErr(x instanceof ImportError ? x.message : 'Không đọc được file này. Hãy chọn file .zip Strava gửi hoặc file activities.csv.');
+    }
+    setImporting(false);
+  };
 
   useEffect(() => { let alive = true; stravaAvailable().then((v) => alive && setHasMcp(v)); return () => { alive = false; }; }, []);
   // Quay về từ trang cấp quyền Strava (bản VPS): đồng bộ ngay.
@@ -92,6 +115,15 @@ export default function Training({ h, set, notify }) {
               <button className="btn" onClick={() => sync(false)} disabled={busy || hasMcp === false}><Icon name="refresh" size={17} />{busy ? 'Đang đồng bộ…' : 'Đồng bộ Strava'}</button>
               {SERVER && hasMcp === true && <button className="btn ghost" onClick={async () => { await stravaDisconnect().catch(() => {}); setHasMcp('connect'); notify('Đã ngắt kết nối Strava'); }}>Ngắt kết nối</button>}
             </div>}
+      </section>
+      <section className="card" style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span className="icon-tile"><Icon name="file" size={19} /></span>
+        <div className="row-main" style={{ minWidth: 200 }}>
+          <div className="row-title">Nhập từ file Strava (miễn phí)</div>
+          <div className="row-sub">Trên strava.com: Cài đặt → Tài khoản của tôi → Tải về hoặc xóa tài khoản → Yêu cầu tải về. Strava gửi file .zip qua email; chọn file đó (hoặc activities.csv bên trong). Nhập lại nhiều lần không bị trùng.</div>
+        </div>
+        <input ref={fileRef} type="file" accept=".zip,.csv,application/zip,text/csv" onChange={importFile} hidden />
+        <button className="btn ghost" onClick={() => fileRef.current?.click()} disabled={importing}><Icon name="plus" size={17} />{importing ? 'Đang đọc file…' : 'Chọn file'}</button>
       </section>
       {hasSample && <div className="row-sub" style={{ marginTop: -6 }}>Đang hiển thị buổi tập mẫu. Lần đồng bộ Strava đầu tiên sẽ thay chúng bằng dữ liệu thật.</div>}
 
