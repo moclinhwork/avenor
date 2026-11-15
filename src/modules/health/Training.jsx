@@ -21,11 +21,12 @@ export default function Training({ h, set, notify }) {
   const auto = useRef(false);
   const fileRef = useRef(null);
   const [importing, setImporting] = useState(false);
+  const [imp, setImp] = useState(null); // { ok, text }
 
   const importFile = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
-    if (!file) return;
-    setImporting(true); setErr('');
+    if (!file) { setImp({ ok: false, text: 'Chưa nhận được file. Hãy thử chọn lại.' }); return; }
+    setImporting(true); setImp({ ok: true, text: `Đang đọc ${file.name || 'file'} (${(file.size / 1048576).toFixed(1)} MB)…` });
     try {
       const { workouts: got, skipped } = await importStravaFile(file);
       if (!got.length) throw new ImportError('Không có buổi đi bộ hay chạy bộ nào trong file.');
@@ -35,9 +36,10 @@ export default function Training({ h, set, notify }) {
         got.forEach((w) => { if (!map.has(w.id)) added++; map.set(w.id, w); });
         return { ...s, workouts: [...map.values()], stravaImportedAt: new Date().toISOString() };
       });
-      notify(`Đã nhập ${got.length} buổi đi bộ/chạy bộ từ file Strava${skipped ? ` (bỏ qua ${skipped} hoạt động khác)` : ''}`);
+      const msg = `Đã nhập ${got.length} buổi đi bộ/chạy bộ (mới nhất ${dmy([...got].sort((a, b) => b.date.localeCompare(a.date))[0].date)})${skipped ? `, bỏ qua ${skipped} hoạt động khác` : ''}.`;
+      setImp({ ok: true, text: msg }); notify(msg);
     } catch (x) {
-      setErr(x instanceof ImportError ? x.message : 'Không đọc được file này. Hãy chọn file .zip Strava gửi hoặc file activities.csv.');
+      setImp({ ok: false, text: x instanceof ImportError ? x.message : `Không đọc được file này (${x?.message || 'lỗi không rõ'}). Hãy chọn file .zip Strava gửi hoặc file activities.csv.` });
     }
     setImporting(false);
   };
@@ -104,7 +106,8 @@ export default function Training({ h, set, notify }) {
         <div className="row-main" style={{ minWidth: 200 }}>
           <div className="row-title">Nhập từ file Strava (miễn phí)</div>
           <div className="row-sub">Trên strava.com: Cài đặt → Tài khoản của tôi → Tải về hoặc xóa tài khoản → Yêu cầu tải về. Strava gửi file .zip qua email; chọn file đó (hoặc activities.csv bên trong). Nhập lại nhiều lần không bị trùng.</div>
-          {err && SERVER && hasMcp === false && <div className="row-sub rose" style={{ marginTop: 4 }}>{err}</div>}
+          {imp && <div className={`row-sub ${imp.ok ? 'good' : 'rose'}`} style={{ marginTop: 6, fontWeight: 600 }}>{imp.text}</div>}
+          {!imp && h.stravaImportedAt && <div className="row-sub" style={{ marginTop: 4 }}>Lần nhập gần nhất: {new Date(h.stravaImportedAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</div>}
         </div>
         <input ref={fileRef} type="file" accept=".zip,.csv,application/zip,text/csv" onChange={importFile} hidden />
         <button className="btn ghost" onClick={() => fileRef.current?.click()} disabled={importing}><Icon name="plus" size={17} />{importing ? 'Đang đọc file…' : 'Chọn file'}</button>

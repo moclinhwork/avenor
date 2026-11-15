@@ -13,26 +13,47 @@ export class ImportError extends Error {}
 const u16 = (v, o) => v.getUint16(o, true);
 const u32 = (v, o) => v.getUint32(o, true);
 
+const u64 = (v, o) => v.getUint32(o, true) + v.getUint32(o + 4, true) * 2 ** 32;
+
 async function csvFromZip(file) {
   const tailSize = Math.min(file.size, 65557);
-  const tail = new DataView(await file.slice(file.size - tailSize).arrayBuffer());
+  const tailStart = file.size - tailSize;
+  const tail = new DataView(await file.slice(tailStart).arrayBuffer());
   let eocd = -1;
   for (let i = tail.byteLength - 22; i >= 0; i--) if (u32(tail, i) === 0x06054b50) { eocd = i; break; }
-  if (eocd < 0) throw new ImportError('File zip bị hỏng hoặc không phải file zip.');
-  const cdSize = u32(tail, eocd + 12);
-  const cdOffset = u32(tail, eocd + 16);
-  if (cdOffset === 0xffffffff) throw new ImportError('Gói dữ liệu quá lớn để đọc trực tiếp. Hãy giải nén rồi chọn file activities.csv.');
+  if (eocd < 0) throw new ImportError('File zip bị hỏng hoặc tải chưa xong. Hãy tải lại file từ email Strava.');
+  let cdSize = u32(tail, eocd + 12);
+  let cdOffset = u32(tail, eocd + 16);
+  // Gói lớn (ZIP64): đọc vị trí thư mục trung tâm từ bản ghi ZIP64.
+  if (cdOffset === 0xffffffff || cdSize === 0xffffffff || u16(tail, eocd + 10) === 0xffff) {
+    const loc = eocd - 20;
+    if (loc < 0 || u32(tail, loc) !== 0x07064b50) throw new ImportError('Không đọc được gói zip này. Hãy giải nén rồi chọn file activities.csv.');
+    const recOff = u64(tail, loc + 8);
+    const rec = new DataView(await file.slice(recOff, recOff + 56).arrayBuffer());
+    cdSize = u64(rec, 40); cdOffset = u64(rec, 48);
+  }
   const cd = new DataView(await file.slice(cdOffset, cdOffset + cdSize).arrayBuffer());
   const dec = new TextDecoder();
   for (let p = 0; p + 46 <= cd.byteLength && u32(cd, p) === 0x02014b50;) {
     const method = u16(cd, p + 10);
-    const compSize = u32(cd, p + 20);
+    let compSize = u32(cd, p + 20);
     const nameLen = u16(cd, p + 28);
     const extraLen = u16(cd, p + 30);
     const commentLen = u16(cd, p + 32);
-    const localOff = u32(cd, p + 42);
+    let localOff = u32(cd, p + 42);
     const name = dec.decode(new Uint8Array(cd.buffer, cd.byteOffset + p + 46, nameLen));
     if (/(^|\/)activities\.csv$/i.test(name)) {
+      // Trường ZIP64 trong extra (id 0x0001): kích thước gốc, kích thước nén, vị trí.
+      for (let e = p + 46 + nameLen; e + 4 <= p + 46 + nameLen + extraLen;) {
+        const id = u16(cd, e), len = u16(cd, e + 2);
+        if (id === 1) {
+          let q = e + 4;
+          if (u32(cd, p + 24) === 0xffffffff) q += 8;
+          if (compSize === 0xffffffff) { compSize = u64(cd, q); q += 8; }
+          if (localOff === 0xffffffff) localOff = u64(cd, q);
+        }
+        e += 4 + len;
+      }
       const lh = new DataView(await file.slice(localOff, localOff + 30).arrayBuffer());
       const start = localOff + 30 + u16(lh, 26) + u16(lh, 28);
       const blob = file.slice(start, start + compSize);
@@ -102,7 +123,9 @@ export function workoutsFromCsv(text) {
 }
 
 export async function importStravaFile(file) {
-  const isZip = /\.zip$/i.test(file.name) || file.type.includes('zip');
+  // Nhận diện zip theo 2 byte đầu "PK" (trên Android tên file có thể không có đuôi .zip).
+  const magic = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+  const isZip = (magic[0] === 0x50 && magic[1] === 0x4b) || /\.zip$/i.test(file.name);
   const text = isZip ? await csvFromZip(file) : await file.text();
   return workoutsFromCsv(text);
 }
