@@ -1,3 +1,4 @@
+import { classify, sportOf } from './sports.js';
 // Đồng bộ buổi tập từ Strava qua connector "Strava" của người dùng (capability `mcp`).
 // Mã lỗi theo hợp đồng của nền tảng; mỗi mã có cách xử lý riêng.
 
@@ -44,7 +45,6 @@ async function buildInput(mcp, days) {
   }
 }
 
-const TYPE_MAP = { walk: 'walk', hike: 'walk', run: 'run', trailrun: 'run', virtualrun: 'run' };
 
 function findList(payload) {
   if (Array.isArray(payload)) return payload;
@@ -57,16 +57,15 @@ function findList(payload) {
 }
 
 function toWorkout(a) {
-  const rawType = String(a.sport_type || a.type || a.activity_type || '').replace(/\s|_/g, '').toLowerCase();
-  const type = TYPE_MAP[rawType];
-  if (!type) return null;
+  const type = classify(a.sport_type || a.type || a.activity_type);
   let km = null;
   if (typeof a.distance_km === 'number') km = a.distance_km;
   else if (typeof a.distance_meters === 'number') km = a.distance_meters / 1000;
   else if (typeof a.distance === 'number') km = a.distance / 1000;
   else if (typeof a.distance === 'string') { const n = parseFloat(a.distance); if (!Number.isNaN(n)) km = /km/i.test(a.distance) ? n : n / 1000; }
   const when = a.start_date_local || a.start_date || a.date;
-  if (km == null || !when) return null;
+  if (!when) return null;
+  if (km == null) km = 0;
   const secs = a.moving_time ?? a.moving_time_seconds ?? a.elapsed_time ?? 0;
   return {
     id: `strava-${a.id ?? `${when}-${km}`}`,
@@ -74,7 +73,7 @@ function toWorkout(a) {
     type,
     km: +km.toFixed(2),
     minutes: Math.round((typeof secs === 'number' ? secs : parseFloat(secs) || 0) / 60),
-    name: a.name || (type === 'run' ? 'Chạy bộ' : 'Đi bộ'),
+    name: a.name || sportOf(type).label,
     source: 'strava',
   };
 }

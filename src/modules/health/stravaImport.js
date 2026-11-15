@@ -2,8 +2,8 @@
 // Nhận file .zip nguyên gói (chỉ đọc phần activities.csv, không nạp cả gói vào bộ nhớ) hoặc file activities.csv.
 
 import { iso } from '../../core/format.js';
+import { classify, sportOf } from './sports.js';
 
-const TYPE_MAP = { walk: 'walk', hike: 'walk', run: 'run', trailrun: 'run', virtualrun: 'run' };
 const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
 
 export class ImportError extends Error {}
@@ -117,19 +117,6 @@ const toNum = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
-// Loại hoạt động có thể ở nhiều ngôn ngữ.
-const TYPE_WORDS = [
-  [/^(trail ?run|virtual ?run|run|running|chạy|chạy bộ|course|course à pied|laufen|lauf|carrera|corsa|corrida|hardlopen)/i, 'run'],
-  [/^(walk|walking|hike|hiking|đi bộ|leo núi|marche|randonnée|gehen|wandern|caminata|caminar|senderismo|camminata|escursionismo|caminhada|wandelen)/i, 'walk'],
-];
-const typeOf = (v) => {
-  const raw = String(v || '').trim();
-  const k = TYPE_MAP[raw.replace(/\s|_/g, '').toLowerCase()];
-  if (k) return k;
-  const hit = TYPE_WORDS.find(([re]) => re.test(raw));
-  return hit ? hit[1] : null;
-};
-
 // Tên cột theo nhiều ngôn ngữ; không khớp thì dùng vị trí cột cố định của Strava.
 const HEAD = {
   id: /^(activity id|id)/i,
@@ -159,23 +146,19 @@ export function workoutsFromCsv(text) {
   if (iDate < 0 || iType < 0 || !dists.length) {
     throw new ImportError(`File không đúng định dạng activities.csv của Strava. Các cột đầu: "${head.slice(0, 8).join(' | ')}". Hãy gửi dòng này cho Claude để chỉnh.`);
   }
-  const out = []; let skipped = 0; const types = new Set();
+  const out = []; let skipped = 0;
   for (const r of rows.slice(1)) {
-    const type = typeOf(r[iType]);
     const date = parseDate(r[iDate]);
+    if (!date) { skipped++; continue; }
+    const type = classify(r[iType]);
     // Cột Distance thứ hai (nếu có) tính bằng mét, chính xác hơn cột đầu (km hoặc dặm tùy cài đặt).
     const meters = dists.length > 1 ? toNum(r[dists[dists.length - 1]]) : null;
-    let km = meters != null ? meters / 1000 : toNum(r[dists[0]]);
-    if (!type) { if (r[iType]) types.add(r[iType]); skipped++; continue; }
-    if (!date || !km || km <= 0) { skipped++; continue; }
-    km = +km.toFixed(2);
+    const km = Math.max(0, +((meters != null ? meters / 1000 : toNum(r[dists[0]])) || 0).toFixed(2));
     const secs = toNum(r[iMoving]) ?? toNum(r[iElapsed]) ?? 0;
-    const id = iId >= 0 && r[iId] ? r[iId] : `${date}-${km}`;
-    out.push({ id: `strava-${id}`, date, type, km, minutes: Math.round(secs / 60), name: r[iName] || (type === 'run' ? 'Chạy bộ' : 'Đi bộ'), source: 'strava' });
+    const id = iId >= 0 && r[iId] ? r[iId] : `${date}-${type}-${km}-${secs}`;
+    out.push({ id: `strava-${id}`, date, type, km, minutes: Math.round(secs / 60), name: r[iName] || sportOf(type).label, source: 'strava', sport: String(r[iType] || '').trim() });
   }
-  if (!out.length) {
-    throw new ImportError(`Không tìm thấy buổi đi bộ hay chạy bộ nào trong ${rows.length - 1} hoạt động${types.size ? ` (loại có trong file: ${[...types].slice(0, 6).join(', ')})` : ''}. Hãy gửi dòng này cho Claude để chỉnh.`);
-  }
+  if (!out.length) throw new ImportError(`Không đọc được hoạt động nào trong ${rows.length - 1} dòng. Các cột đầu: "${head.slice(0, 8).join(' | ')}". Hãy gửi dòng này cho Claude để chỉnh.`);
   return { workouts: out, skipped };
 }
 
