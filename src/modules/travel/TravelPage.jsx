@@ -106,14 +106,28 @@ export default function TravelPage() {
   const notify = useNotify();
   const [tab, setTab] = useState('overview');
   const [openId, setOpenId] = useState(null);
+  const [statYear, setStatYear] = useState(TODAY.getFullYear());
 
   const upcoming = data.trips.filter((t) => t.end >= todayIso).sort((a, b) => a.start.localeCompare(b.start));
   const done = data.trips.filter((t) => t.end < todayIso).sort((a, b) => b.start.localeCompare(a.start));
   const next = upcoming[0];
   const open = data.trips.find((t) => t.id === openId);
-  const monthDates = Array.from({ length: 7 }, (_, i) => new Date(TODAY.getFullYear(), TODAY.getMonth() - 5 + i, 1));
-  const months = monthDates.map((m) => `T${m.getMonth() + 1}`);
-  const perMonth = monthDates.map((m) => data.trips.filter((t) => parse(t.start).getMonth() === m.getMonth() && parse(t.start).getFullYear() === m.getFullYear()).reduce((s, t) => s + nights(t) + 1, 0));
+  // Đếm từng ngày của chuyến vào đúng tháng của ngày đó (chuyến xuyên tháng, xuyên năm vẫn đúng).
+  const tripYears = [...new Set(data.trips.flatMap((t) => [Number(t.start.slice(0, 4)), Number(t.end.slice(0, 4))]))];
+  const years = [...new Set([...tripYears, TODAY.getFullYear()])].sort((a, b) => b - a);
+  const months = Array.from({ length: 12 }, (_, i) => `T${i + 1}`);
+  const perMonth = Array(12).fill(0);
+  let pastDays = 0; let futureDays = 0; let tripsInYear = 0;
+  for (const t of data.trips) {
+    let counted = false;
+    for (let d = parse(t.start); iso(d) <= t.end; d = addDays(d, 1)) {
+      if (d.getFullYear() !== statYear) continue;
+      perMonth[d.getMonth()] += 1; counted = true;
+      if (iso(d) <= todayIso) pastDays += 1; else futureDays += 1;
+    }
+    if (counted) tripsInYear += 1;
+  }
+  const yearDays = pastDays + futureDays;
   const doneYear = done.filter((t) => t.start.startsWith(String(TODAY.getFullYear())));
 
   // Từ một kế hoạch tạo chuyến đi chi tiết (lịch trình, chi phí, hành lý).
@@ -158,8 +172,19 @@ export default function TravelPage() {
             </div>
           </div>
           <div className="stack">
-            <Card title="Số ngày du lịch theo tháng" icon="chart">
-              <BarChart labels={months} series={[{ name: 'Ngày', color: 'var(--lav)', values: perMonth }]} height={180} highlight={5} />
+            <Card title="Số ngày du lịch theo tháng" icon="chart" action={
+              <select className="input" aria-label="Chọn năm" value={statYear} onChange={(e) => setStatYear(Number(e.target.value))} style={{ width: 'auto', minHeight: 36, padding: '6px 12px', borderRadius: 999, fontSize: 13.5 }}>
+                {years.map((y) => <option key={y} value={y}>Năm {y}</option>)}
+              </select>
+            }>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                <span className="big-num" style={{ fontSize: 34 }}>{yearDays}</span>
+                <span style={{ fontWeight: 600 }}>ngày du lịch năm {statYear}</span>
+              </div>
+              <div className="row-sub" style={{ marginBottom: 10 }}>
+                {tripsInYear} chuyến{yearDays ? ` · ${pastDays} ngày đã đi${futureDays ? ` · ${futureDays} ngày sắp tới` : ''}` : ''}
+              </div>
+              <BarChart labels={months} series={[{ name: 'Ngày', color: 'var(--lav)', values: perMonth }]} height={180} />
             </Card>
             <Card title="Chuyến tiếp theo" icon="cal">
               <div style={{ display: 'grid', gap: 10 }}>{upcoming.map((t) => <TripRow key={t.id} t={t} onOpen={() => setOpenId(t.id)} />)}</div>
