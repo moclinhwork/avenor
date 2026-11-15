@@ -229,7 +229,8 @@ p { margin: 0; }
   box-shadow: var(--shadow);
 }
 .card.glow { box-shadow: var(--shadow-glow); }
-.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.card-head .card-title { flex: 1 1 auto; min-width: 0; }
 .card-title { display: flex; align-items: center; gap: 9px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
 .card-title svg { color: var(--mint); }
 .link { background: none; border: 0; color: var(--mint); font-size: 13px; font-weight: 600; padding: 4px; display: inline-flex; align-items: center; gap: 2px; }
@@ -392,3 +393,5 @@ p { margin: 0; }
 .money-tile.out .v, .money-tile.out svg { color: var(--rose); }
 .big-num { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .auth-logo .brand-mark { width: 88px; height: 88px; }
+.trip-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 900px) { .trip-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

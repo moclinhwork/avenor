@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useModule, useNotify } from '../../core/store.jsx';
-import { daysBetween, daysFromToday, dm, dmy, parse, pct, TODAY, todayIso, uid, vnd, vndShort } from '../../core/format.js';
-import { Card, Check, Cover, PageHead, PhotoPicker, Tabs } from '../../ui/common.jsx';
-import { BarChart, Donut, Progress } from '../../ui/charts.jsx';
+import { addDays, daysBetween, iso, daysFromToday, dm, dmy, parse, pct, TODAY, todayIso, uid, vnd, vndShort } from '../../core/format.js';
+import { Card, Cover, PageHead, PhotoPicker, Tabs } from '../../ui/common.jsx';
+import { BarChart } from '../../ui/charts.jsx';
 import Icon from '../../ui/Icon.jsx';
 import { DecadePlans, YearPlans } from './Plans.jsx';
 import { SCENES } from './data.js';
+import { CostEditor, ItineraryEditor, PackingEditor } from './TripEditors.jsx';
 
 const range = (t) => `${dm(t.start)} – ${dmy(t.end)}`;
 const nights = (t) => daysBetween(parse(t.start), parse(t.end));
@@ -25,7 +26,7 @@ function TripRow({ t, onOpen }) {
 }
 
 function TripInfoForm({ trip, onSave, onCancel, onDelete }) {
-  const [f, setF] = useState({ name: trip.name, place: trip.place, start: trip.start, end: trip.end, travelers: trip.travelers, stay: trip.stay, scene: trip.scene, photo: trip.photo || null });
+  const [f, setF] = useState({ name: trip.name, place: trip.place, start: trip.start, end: trip.end, travelers: trip.travelers, stay: trip.stay, scene: trip.scene, note: trip.note || '', photo: trip.photo || null });
   const [ask, setAsk] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return (
@@ -43,6 +44,7 @@ function TripInfoForm({ trip, onSave, onCancel, onDelete }) {
         <div className="field"><label htmlFor="ti-stay">Lưu trú</label><input id="ti-stay" className="input" value={f.stay} onChange={set('stay')} /></div>
         <div className="field"><label htmlFor="ti-scene">Tranh minh họa</label><select id="ti-scene" className="input" value={f.scene} onChange={set('scene')}>{Object.entries(SCENES).map(([k, sc]) => <option key={k} value={k}>{sc.label}</option>)}</select></div>
       </div>
+      <div className="field"><label htmlFor="ti-note">Ghi chú</label><textarea id="ti-note" rows={2} className="input" value={f.note} onChange={set('note')} placeholder="Điểm muốn đến, món muốn ăn…" /></div>
       <PhotoPicker id="ti-photo" photo={f.photo} kind={f.scene} sky={SCENES[f.scene]?.sky} onChange={(photo) => setF({ ...f, photo })} />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button className="btn" type="submit"><Icon name="check" size={17} />Lưu</button>
@@ -55,16 +57,15 @@ function TripInfoForm({ trip, onSave, onCancel, onDelete }) {
   );
 }
 
-function TripDetail({ trip, onBack, update, onDelete }) {
+function TripDetail({ trip, onBack, update, onDelete, notify }) {
   const [tab, setTab] = useState('plan');
   const [editInfo, setEditInfo] = useState(false);
-  const [item, setItem] = useState('');
   const planned = trip.costs.reduce((s, c) => s + c.plan, 0);
-  const spent = trip.costs.reduce((s, c) => s + c.actual, 0);
   const packed = trip.packing.filter((p) => p.done).length;
-  const groups = [...new Set(trip.packing.map((p) => p.group))];
-  const colors = ['var(--mint)', 'var(--lav)', 'var(--sky)', 'var(--amber)', '#a8607a'];
-  const addItem = () => { if (!item.trim()) return; update((t) => ({ ...t, packing: [...t.packing, { id: uid(), label: item.trim(), group: 'Khác', done: false }] })); setItem(''); };
+  // Dữ liệu cũ: khoản chi chưa có id thì gán id để sửa, xóa được.
+  useEffect(() => {
+    if (trip.costs.some((c) => !c.id)) update((t) => ({ ...t, costs: t.costs.map((c) => (c.id ? c : { ...c, id: uid() })) }));
+  }, [trip.id]);
 
   return (
     <div className="fade-in">
@@ -85,7 +86,7 @@ function TripDetail({ trip, onBack, update, onDelete }) {
 
       {editInfo && <TripInfoForm trip={trip} onCancel={() => setEditInfo(false)} onDelete={onDelete} onSave={(f) => { update((t) => ({ ...t, ...f })); setEditInfo(false); }} />}
 
-      <div className="grid g4" style={{ marginTop: 14 }}>
+      <div className="grid g4 trip-facts" style={{ marginTop: 14 }}>
         {[['users', 'Người đi', trip.travelers], ['wallet', 'Dự trù', vndShort(planned)], ['home2', 'Lưu trú', trip.stay], ['bag', 'Hành lý', `${packed}/${trip.packing.length} món`]].map(([ic, l, v]) => (
           <section key={l} className="card" style={{ padding: 14 }}><div className="row-sub" style={{ display: 'flex', gap: 6, alignItems: 'center' }}><Icon name={ic} size={14} />{l}</div><div style={{ fontWeight: 600, marginTop: 4 }}>{v}</div></section>
         ))}
@@ -93,71 +94,9 @@ function TripDetail({ trip, onBack, update, onDelete }) {
 
       <div style={{ marginTop: 14 }}><Tabs value={tab} onChange={setTab} tabs={[{ id: 'plan', label: 'Lịch trình' }, { id: 'cost', label: 'Chi phí' }, { id: 'pack', label: 'Hành lý' }]} /></div>
 
-      {tab === 'plan' && (
-        <Card>
-          {trip.itinerary.length ? trip.itinerary.map((d, i) => (
-            <div key={d.date} style={{ display: 'flex', gap: 14, paddingBottom: i < trip.itinerary.length - 1 ? 18 : 0, position: 'relative' }}>
-              <div style={{ display: 'grid', justifyItems: 'center' }}>
-                <span style={{ width: 14, height: 14, borderRadius: 9, border: '3px solid var(--mint)', background: 'var(--bg)', marginTop: 3 }} />
-                {i < trip.itinerary.length - 1 && <span style={{ width: 2, flex: 1, background: 'var(--line-strong)' }} />}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row-title">Ngày {i + 1} ({dm(d.date)}) · {d.title}</div>
-                <ul style={{ margin: '6px 0 0', paddingLeft: 18, color: 'var(--muted)', display: 'grid', gap: 3, fontSize: 13 }}>{d.items.map((x) => <li key={x}>{x}</li>)}</ul>
-              </div>
-            </div>
-          )) : <div className="empty">Chưa có lịch trình. Thêm từng ngày khi chốt kế hoạch.</div>}
-        </Card>
-      )}
-
-      {tab === 'cost' && (
-        <div className="grid g-main">
-          <Card title="Dự trù theo hạng mục" icon="pie">
-            <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Donut segments={trip.costs.map((c, i) => ({ value: c.plan, color: colors[i % colors.length] }))} size={150} thickness={18}>
-                <div><div className="num" style={{ fontSize: 20, fontWeight: 600 }}>{vndShort(planned)}</div><div className="muted" style={{ fontSize: 11 }}>dự trù</div></div>
-              </Donut>
-              <div style={{ display: 'grid', gap: 10, flex: 1, minWidth: 180 }}>
-                {trip.costs.map((c, i) => (
-                  <div key={c.label}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}><span><i style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 9, background: colors[i % colors.length], marginRight: 8 }} />{c.label}</span><span className="num">{vndShort(c.actual)} / {vndShort(c.plan)}</span></div>
-                    <Progress value={pct(c.actual, c.plan)} style={{ marginTop: 5, height: 5 }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-          <Card title="Đã chi" icon="wallet">
-            <div className="stat-value">{vnd(spent)}</div>
-            <div className="row-sub">trên dự trù {vnd(planned)}</div>
-            <Progress value={pct(spent, planned)} style={{ marginTop: 12 }} />
-            <p className="muted" style={{ marginTop: 12, fontSize: 13 }}>Còn {vnd(planned - spent)} cho các khoản chưa chi. Các khoản đã đặt cọc được ghi từ module Tài chính.</p>
-          </Card>
-        </div>
-      )}
-
-      {tab === 'pack' && (
-        <Card title={`Đã soạn ${packed}/${trip.packing.length}`} icon="bag" action={<span className="chip mint">{pct(packed, trip.packing.length)}%</span>}>
-          <Progress value={pct(packed, trip.packing.length)} style={{ marginBottom: 12 }} />
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))' }}>
-            {groups.map((g) => (
-              <div key={g}>
-                <div className="faint" style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, margin: '4px 0' }}>{g}</div>
-                {trip.packing.filter((p) => p.group === g).map((p) => (
-                  <div className="row" key={p.id} style={{ borderTop: 0, padding: '6px 0' }}>
-                    <Check on={p.done} label={p.label} onClick={() => update((t) => ({ ...t, packing: t.packing.map((x) => (x.id === p.id ? { ...x, done: !x.done } : x)) }))} />
-                    <span className={p.done ? 'done-text' : ''}>{p.label}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className="form-row" style={{ marginTop: 12 }}>
-            <div className="field"><label htmlFor="pack-new">Thêm món đồ</label><input id="pack-new" className="input" value={item} onChange={(e) => setItem(e.target.value)} placeholder="Ví dụ: Ô gấp" /></div>
-            <button className="btn sm" style={{ height: 42 }} onClick={addItem}><Icon name="plus" size={16} />Thêm</button>
-          </div>
-        </Card>
-      )}
+      {tab === 'plan' && <ItineraryEditor trip={trip} update={update} notify={notify} />}
+      {tab === 'cost' && <CostEditor trip={trip} update={update} notify={notify} />}
+      {tab === 'pack' && <PackingEditor trip={trip} update={update} />}
     </div>
   );
 }
@@ -186,14 +125,14 @@ export default function TravelPage() {
     const end = `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, '0')}-${String(endD.getDate()).padStart(2, '0')}`;
     set((s) => ({
       ...s,
-      trips: [...s.trips, { id, name: p.name, place: p.place || p.name, start: startDay, end, scene: p.scene, sky: SCENES[p.scene]?.sky || 'dawn', travelers: '1 người', stay: 'Chưa đặt', note: p.note || '', photo: p.photo || null, itinerary: [], costs: [{ label: 'Tổng', plan: p.budget || 0, actual: 0 }], packing: [] }],
+      trips: [...s.trips, { id, name: p.name, place: p.place || p.name, start: startDay, end, scene: p.scene, sky: SCENES[p.scene]?.sky || 'dawn', travelers: '1 người', stay: 'Chưa đặt', note: p.note || '', photo: p.photo || null, itinerary: [], costs: [{ id: uid(), label: 'Tổng', plan: p.budget || 0, actual: 0 }], packing: [] }],
       yearPlan: (s.yearPlan || []).map((x) => (x.id === p.id ? { ...x, status: 'booked' } : x)),
     }));
     notify('Đã tạo chuyến đi, bạn chỉnh ngày và chi tiết ở đây');
     setOpenId(id);
   };
 
-  if (open) return <TripDetail trip={open} onBack={() => setOpenId(null)} onDelete={() => { set((s) => ({ ...s, trips: s.trips.filter((t) => t.id !== open.id) })); setOpenId(null); notify('Đã xóa chuyến đi'); }} update={(fn) => set((s) => ({ ...s, trips: s.trips.map((t) => (t.id === open.id ? fn(t) : t)) }))} />;
+  if (open) return <TripDetail trip={open} notify={notify} onBack={() => setOpenId(null)} onDelete={() => { set((s) => ({ ...s, trips: s.trips.filter((t) => t.id !== open.id) })); setOpenId(null); notify('Đã xóa chuyến đi'); }} update={(fn) => set((s) => ({ ...s, trips: s.trips.map((t) => (t.id === open.id ? fn(t) : t)) }))} />;
 
   return (
     <div className="fade-in">
@@ -236,7 +175,7 @@ export default function TravelPage() {
             {upcoming.map((t) => <TripRow key={t.id} t={t} onOpen={() => setOpenId(t.id)} />)}
             <button className="btn" onClick={() => {
               const id = uid();
-              set((s) => ({ ...s, trips: [...s.trips, { id, name: 'Chuyến đi mới', place: 'Chưa chọn', start: '2027-01-15', end: '2027-01-17', scene: 'sea', sky: 'dawn', travelers: '1 người', stay: 'Chưa đặt', note: '', itinerary: [], costs: [{ label: 'Tổng', plan: 5_000_000, actual: 0 }], packing: [] }] }));
+              set((s) => ({ ...s, trips: [...s.trips, { id, name: 'Chuyến đi mới', place: 'Chưa chọn', start: iso(addDays(TODAY, 14)), end: iso(addDays(TODAY, 16)), scene: 'sea', sky: 'dawn', travelers: '1 người', stay: 'Chưa đặt', note: '', itinerary: [], costs: [{ id: uid(), label: 'Tổng', plan: 5_000_000, actual: 0 }], packing: [] }] }));
               notify('Đã thêm chuyến đi nháp'); setOpenId(id);
             }}><Icon name="plus" size={18} />Thêm chuyến đi</button>
           </div>
