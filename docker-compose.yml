@@ -1,0 +1,31 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PUBLIC_URL: https://${DOMAIN}
+    volumes:
+      - ./data:/data
+    expose:
+      - "3000"
+
+  # Caddy tự xin và gia hạn chứng chỉ HTTPS cho tên miền.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

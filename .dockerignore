@@ -1,0 +1,7 @@
+node_modules
+dist
+dist-server
+data
+.env
+*.html.bak
+avenor-demo.html
