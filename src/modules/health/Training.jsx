@@ -100,31 +100,34 @@ export default function Training({ h, set, notify }) {
   return (
     <div className="stack">
       <section className="card glow" style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span className="icon-tile" style={{ background: '#fc4c02', color: '#fff' }}><Icon name="bolt" size={19} /></span>
-        <div className="row-main" style={{ minWidth: 200 }}>
-          <div className="row-title">Đồng bộ với Strava</div>
-          <div className="row-sub">
-            {h.stravaSyncedAt ? `Lần đồng bộ gần nhất: ${new Date(h.stravaSyncedAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })} · lấy các buổi đi bộ, chạy bộ trong 30 ngày` : 'Lấy các buổi đi bộ và chạy bộ trong 30 ngày gần nhất từ tài khoản Strava của bạn.'}
-          </div>
-          {err && <div className="row-sub rose" style={{ marginTop: 4 }}>{err}</div>}
-          {hasMcp === false && !err && <div className="row-sub amber" style={{ marginTop: 4 }}>{SERVER ? 'Máy chủ chưa được cấu hình Strava (thiếu STRAVA_CLIENT_ID). Bạn vẫn có thể ghi tay ở dưới.' : 'Mở app trên Claude và kết nối Strava để đồng bộ. Bạn vẫn có thể ghi tay ở dưới.'}</div>}
-        </div>
-        {hasMcp === 'connect'
-          ? <button className="btn" onClick={stravaConnect}><Icon name="bolt" size={17} />Kết nối Strava</button>
-          : <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn" onClick={() => sync(false)} disabled={busy || hasMcp === false}><Icon name="refresh" size={17} />{busy ? 'Đang đồng bộ…' : 'Đồng bộ Strava'}</button>
-              {SERVER && hasMcp === true && <button className="btn ghost" onClick={async () => { await stravaDisconnect().catch(() => {}); setHasMcp('connect'); notify('Đã ngắt kết nối Strava'); }}>Ngắt kết nối</button>}
-            </div>}
-      </section>
-      <section className="card" style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
         <span className="icon-tile"><Icon name="file" size={19} /></span>
         <div className="row-main" style={{ minWidth: 200 }}>
           <div className="row-title">Nhập từ file Strava (miễn phí)</div>
           <div className="row-sub">Trên strava.com: Cài đặt → Tài khoản của tôi → Tải về hoặc xóa tài khoản → Yêu cầu tải về. Strava gửi file .zip qua email; chọn file đó (hoặc activities.csv bên trong). Nhập lại nhiều lần không bị trùng.</div>
+          {err && SERVER && hasMcp === false && <div className="row-sub rose" style={{ marginTop: 4 }}>{err}</div>}
         </div>
         <input ref={fileRef} type="file" accept=".zip,.csv,application/zip,text/csv" onChange={importFile} hidden />
         <button className="btn ghost" onClick={() => fileRef.current?.click()} disabled={importing}><Icon name="plus" size={17} />{importing ? 'Đang đọc file…' : 'Chọn file'}</button>
       </section>
+      {(!SERVER || hasMcp !== false) && (
+        <section className="card glow" style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className="icon-tile" style={{ background: '#fc4c02', color: '#fff' }}><Icon name="bolt" size={19} /></span>
+          <div className="row-main" style={{ minWidth: 200 }}>
+            <div className="row-title">Đồng bộ với Strava</div>
+            <div className="row-sub">
+              {h.stravaSyncedAt ? `Lần đồng bộ gần nhất: ${new Date(h.stravaSyncedAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })} · lấy các buổi đi bộ, chạy bộ trong 30 ngày` : 'Lấy các buổi đi bộ và chạy bộ trong 30 ngày gần nhất từ tài khoản Strava của bạn.'}
+            </div>
+            {err && <div className="row-sub rose" style={{ marginTop: 4 }}>{err}</div>}
+            {hasMcp === false && !err && <div className="row-sub amber" style={{ marginTop: 4 }}>{SERVER ? 'Máy chủ chưa được cấu hình Strava (thiếu STRAVA_CLIENT_ID). Bạn vẫn có thể ghi tay ở dưới.' : 'Mở app trên Claude và kết nối Strava để đồng bộ. Bạn vẫn có thể ghi tay ở dưới.'}</div>}
+          </div>
+          {hasMcp === 'connect'
+            ? <button className="btn" onClick={stravaConnect}><Icon name="bolt" size={17} />Kết nối Strava</button>
+            : <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn" onClick={() => sync(false)} disabled={busy || hasMcp === false}><Icon name="refresh" size={17} />{busy ? 'Đang đồng bộ…' : 'Đồng bộ Strava'}</button>
+                {SERVER && hasMcp === true && <button className="btn ghost" onClick={async () => { await stravaDisconnect().catch(() => {}); setHasMcp('connect'); notify('Đã ngắt kết nối Strava'); }}>Ngắt kết nối</button>}
+              </div>}
+        </section>
+      )}
       {hasSample && <div className="row-sub" style={{ marginTop: -6 }}>Đang hiển thị buổi tập mẫu. Lần đồng bộ Strava đầu tiên sẽ thay chúng bằng dữ liệu thật.</div>}
 
       <div className="grid g4">
