@@ -15,6 +15,12 @@ const ALLOW_SIGNUP = process.env.ALLOW_SIGNUP === '1';
 const STRAVA_ID = process.env.STRAVA_CLIENT_ID || '';
 const STRAVA_SECRET = process.env.STRAVA_CLIENT_SECRET || '';
 const SESSION_DAYS = 60;
+const GOOGLE_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE = !!(GOOGLE_ID && GOOGLE_SECRET);
+const ALLOWED_EMAILS = String(process.env.ALLOWED_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+// Khi đã bật Google, mặc định tắt đăng nhập bằng mật khẩu (đặt PASSWORD_LOGIN=1 để giữ).
+const PASSWORD_LOGIN = process.env.PASSWORD_LOGIN ? process.env.PASSWORD_LOGIN === '1' : !GOOGLE;
 
 fs.mkdirSync(path.join(DATA_DIR, 'photos'), { recursive: true });
 const db = new DatabaseSync(path.join(DATA_DIR, 'avenor.db'));
@@ -28,6 +34,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS photos (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, type TEXT NOT NULL, created INTEGER NOT NULL);
 `);
 db.prepare('DELETE FROM sessions WHERE expires < ?').run(Date.now());
+if (!db.prepare("SELECT 1 FROM pragma_table_info('users') WHERE name = 'email'").get()) db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users(email)');
 
 // ---------- tiện ích ----------
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
@@ -114,8 +122,40 @@ async function api(req, res, url) {
   if (p === '/api/me' && m === 'GET') {
     const u = sessionUser(req);
     const users = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
-    return send(res, 200, { user: u, canSignup: ALLOW_SIGNUP || users === 0, strava: !!(STRAVA_ID && STRAVA_SECRET) });
+    return send(res, 200, { user: u, canSignup: PASSWORD_LOGIN && (ALLOW_SIGNUP || users === 0), password: PASSWORD_LOGIN, google: GOOGLE, strava: !!(STRAVA_ID && STRAVA_SECRET) });
   }
+  if (p === '/api/auth/google' && m === 'GET') {
+    if (!GOOGLE) return fail(res, 503, 'google_not_configured');
+    const state = crypto.randomBytes(16).toString('base64url');
+    const q = new URLSearchParams({ client_id: GOOGLE_ID, redirect_uri: `${PUBLIC_URL}/api/auth/google/callback`, response_type: 'code', scope: 'openid email profile', state, prompt: 'select_account' });
+    return send(res, 302, '', { Location: `https://accounts.google.com/o/oauth2/v2/auth?${q}`, 'Set-Cookie': cookie('avenor_g_state', state, 600) });
+  }
+  if (p === '/api/auth/google/callback' && m === 'GET') {
+    const back = (err, extra = []) => send(res, 302, '', { Location: err ? `/#login?err=${err}` : '/', 'Set-Cookie': [cookie('avenor_g_state', '', 0), ...extra] });
+    const state = url.searchParams.get('state');
+    if (!GOOGLE || !state || state !== cookies(req).avenor_g_state) return back('state');
+    if (url.searchParams.get('error')) return back('denied');
+    const tr = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ code: url.searchParams.get('code') || '', client_id: GOOGLE_ID, client_secret: GOOGLE_SECRET, redirect_uri: `${PUBLIC_URL}/api/auth/google/callback`, grant_type: 'authorization_code' }),
+    });
+    if (!tr.ok) return back('token');
+    const tok = await tr.json();
+    const ur = await fetch('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: `Bearer ${tok.access_token}` } });
+    if (!ur.ok) return back('token');
+    const info = await ur.json();
+    const email = String(info.email || '').toLowerCase();
+    if (!email || info.email_verified !== true) return back('unverified');
+    if (!ALLOWED_EMAILS.includes(email)) return back('not_allowed');
+    let row = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (!row) {
+      const id = newId();
+      db.prepare('INSERT INTO users (id, username, pass, created, email) VALUES (?, ?, ?, ?, ?)').run(id, email, '!google', Date.now(), email);
+      row = { id };
+    }
+    return back(null, [startSession(res, row.id)]);
+  }
+  if ((p === '/api/signup' || p === '/api/login') && m === 'POST' && !PASSWORD_LOGIN) return fail(res, 403, 'password_disabled');
   if (p === '/api/signup' && m === 'POST') {
     const users = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
     if (!ALLOW_SIGNUP && users > 0) return fail(res, 403, 'signup_closed');
@@ -148,6 +188,7 @@ async function api(req, res, url) {
   if (!user) return fail(res, 401, 'auth');
 
   if (p === '/api/password' && m === 'POST') {
+    if (!PASSWORD_LOGIN) return fail(res, 403, 'password_disabled');
     const { current, next } = await readJson(req, 4096);
     const row = db.prepare('SELECT pass FROM users WHERE id = ?').get(user.id);
     if (!checkPass(String(current || ''), row.pass)) return fail(res, 401, 'bad_login');

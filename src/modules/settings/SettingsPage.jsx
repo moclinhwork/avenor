@@ -22,7 +22,7 @@ function AccountCard({ notify }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <div><div className="muted" style={{ fontSize: 12.5 }}>Đang đăng nhập</div><b>{acc.user.username}</b></div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn ghost" onClick={() => setPw(pw ? null : { current: '', next: '' })}>Đổi mật khẩu</button>
+          {acc.password && <button className="btn ghost" onClick={() => setPw(pw ? null : { current: '', next: '' })}>Đổi mật khẩu</button>}
           <button className="btn ghost" onClick={acc.logout}>Đăng xuất</button>
         </div>
       </div>
