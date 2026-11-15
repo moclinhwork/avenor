@@ -2,7 +2,7 @@
 # Cài hoặc cập nhật Avenor trên Ubuntu. Chạy bằng root:
 #   bash <(curl -fsSL https://raw.githubusercontent.com/<owner>/avenor/main/deploy/install.sh) <git-url>
 set -euo pipefail
-REPO="${1:-}"
+REPO="${1:-https://github.com/moclinhwork/avenor.git}"
 DIR=/opt/avenor
 
 if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
