@@ -96,7 +96,7 @@ export default function SettingsPage() {
         <div className="stack">
           {SERVER && <AccountCard notify={notify} />}
           <Card title="Giao diện" icon="sparkle" glow>
-            <div className="tabs" style={{ margin: 0, maxWidth: 360 }}>
+            <div className="tabs seg" style={{ margin: 0, maxWidth: 360 }}>
               {[['light', 'Sáng'], ['dark', 'Tối']].map(([k, l]) => <button key={k} className={`tab ${theme === k ? 'active' : ''}`} aria-pressed={theme === k} onClick={() => applyTheme(k)}>{l}</button>)}
             </div>
             <p className="muted" style={{ marginTop: 10, fontSize: 13 }}>Lựa chọn được nhớ riêng trên từng thiết bị.</p>

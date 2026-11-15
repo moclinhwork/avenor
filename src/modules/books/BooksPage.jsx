@@ -41,19 +41,31 @@ export default function BooksPage() {
       {tab === 'overview' && (
         <div className="stack">
           <div className="grid g-main">
-            <Card title={`Mục tiêu đọc ${year}`} icon="target" glow>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                <div>
-                  <div className="num" style={{ fontSize: 46, fontWeight: 700, lineHeight: 1 }}>{done.length} <span className="muted" style={{ fontSize: 26 }}>/ {d.yearGoal}</span></div>
-                  <div className="muted" style={{ marginTop: 4 }}>cuốn đã đọc</div>
-                  <span className="chip mint" style={{ marginTop: 10 }}><Icon name="book" size={13} />Còn {Math.max(0, d.yearGoal - done.length)} cuốn · {weeksLeft} tuần</span>
+            <div className="stack">
+              <section className="card" style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+                <Ring value={p} size={150} thickness={14} color="var(--lav)">
+                  <div style={{ textAlign: 'center' }}><div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>{done.length} / {d.yearGoal}</div><div style={{ fontSize: 13 }}>cuốn</div></div>
+                </Ring>
+                <div style={{ flex: 1, minWidth: 150, borderLeft: '1px solid var(--line)', paddingLeft: 18 }}>
+                  <div style={{ fontSize: 14.5 }}>Mục tiêu đọc {year}</div>
+                  <div className="big-num" style={{ fontSize: 34 }}>{done.length} / {d.yearGoal}</div>
+                  <div style={{ color: 'var(--good)', fontWeight: 700, fontSize: 15 }}>Đạt {p}%</div>
+                  <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>Còn {Math.max(0, d.yearGoal - done.length)} cuốn · {weeksLeft} tuần</div>
                 </div>
-                <Ring value={p} size={130} thickness={13}><div className="num" style={{ fontSize: 28, fontWeight: 600 }}>{p}%</div></Ring>
+              </section>
+              <Card title="Sách đã đọc" icon="chart" action={<span className="chip">Năm {year}</span>}>
+                <BarChart labels={MONTHS} series={[{ name: 'Sách', color: 'var(--lav)', values: perMonth }]} height={170} />
+              </Card>
+              <div className="grid g3" style={{ gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10 }}>
+                {[['book', '', 'Tổng số sách', d.books.length], ['checkCircle', 'good', 'Đã đọc', counts.read], ['layers', '', 'Chưa đọc', counts.unread]].map(([ic, tone, l, v]) => (
+                  <section key={l} className="card" style={{ padding: 14 }}>
+                    <span className={`icon-tile ${tone}`} style={{ width: 34, height: 34 }}><Icon name={ic} size={18} /></span>
+                    <div style={{ fontSize: 13.5, marginTop: 10 }}>{l}</div>
+                    <div className="stat-value" style={{ fontSize: 26 }}>{v}</div>
+                  </section>
+                ))}
               </div>
-              <div style={{ marginTop: 16 }}>
-                <BarChart labels={MONTHS.slice(0, shown)} series={[{ name: 'Sách', color: 'var(--lav)', values: perMonth.slice(0, shown) }]} height={150} />
-              </div>
-            </Card>
+            </div>
             <div className="stack">
               <Card title="Phân loại tủ sách" icon="layers">
                 <div className="grid g3" style={{ gridTemplateColumns: 'repeat(3, minmax(0,1fr))' }}>
@@ -94,7 +106,7 @@ export default function BooksPage() {
         <div className="stack">
           <div className="form-row">
             <div className="field" style={{ flex: '2 1 220px' }}><label htmlFor="b-q">Tìm sách</label><input id="b-q" className="input" placeholder="Tên sách hoặc tác giả" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-            <div className="tabs" style={{ margin: 0, flex: '1 1 260px' }}>{[['all', 'Tất cả'], ['reading', 'Đang đọc'], ['read', 'Đã đọc'], ['unread', 'Chưa đọc']].map(([k, l]) => <button key={k} className={`tab ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>{l}</button>)}</div>
+            <div className="tabs seg" style={{ margin: 0, flex: '1 1 260px' }}>{[['all', 'Tất cả'], ['reading', 'Đang đọc'], ['read', 'Đã đọc'], ['unread', 'Chưa đọc']].map(([k, l]) => <button key={k} className={`tab ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>{l}</button>)}</div>
           </div>
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' }}>
             {shelf.map((x) => (

@@ -205,28 +205,24 @@ export default function TravelPage() {
           <div className="stack">
             {next && (
               <button onClick={() => setOpenId(next.id)} style={{ all: 'unset', cursor: 'pointer', display: 'block' }}>
-                <Cover photo={next.photo} kind={next.scene} sky={next.sky} height={250} radius={22}>
-                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 20 }}>
-                    <h2 style={{ fontSize: 30, fontWeight: 700 }}>{next.name}</h2>
-                    <div style={{ color: '#dfeee9' }}>{range(next)}</div>
-                    <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                      <div><span className="num" style={{ fontSize: 52, fontWeight: 700, lineHeight: 1 }}>{daysFromToday(next.start)}</span> <span style={{ fontSize: 22, fontWeight: 600 }}>ngày</span><div style={{ color: '#dfeee9' }}>nữa là khởi hành</div></div>
-                      <span className="icon-btn" style={{ background: 'var(--mint)', color: 'var(--on-accent)', borderRadius: 99 }}><Icon name="chevR" /></span>
-                    </div>
+                <Cover photo={next.photo} kind={next.scene} sky={next.sky} height={250} radius={18}>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%', padding: 20 }}>
+                    <h2 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1 }}>{next.name}</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 15 }}><Icon name="cal" size={17} />{range(next)} · {daysFromToday(next.start) > 0 ? `còn ${daysFromToday(next.start)} ngày` : 'đang diễn ra'}</div>
                   </div>
                 </Cover>
               </button>
             )}
             <div className="grid g2">
-              <section className="card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}><span className="icon-tile"><Icon name="bag" /></span><div><div className="stat-value">{upcoming.length}</div><div className="stat-label">Sắp tới</div></div></section>
-              <section className="card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}><span className="icon-tile lav"><Icon name="check" /></span><div><div className="stat-value">{doneYear.length}</div><div className="stat-label">Đã đi năm {TODAY.getFullYear()}</div></div></section>
+              <section className="card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}><span className="icon-tile"><Icon name="plane" /></span><div><div style={{ fontSize: 14 }}>Sắp tới</div><div className="stat-value">{upcoming.length}</div></div></section>
+              <section className="card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}><span className="icon-tile good"><Icon name="checkCircle" /></span><div><div style={{ fontSize: 14 }}>Đã đi {TODAY.getFullYear()}</div><div className="stat-value">{doneYear.length}</div></div></section>
             </div>
           </div>
           <div className="stack">
             <Card title="Số ngày du lịch theo tháng" icon="chart">
-              <BarChart labels={months} series={[{ name: 'Ngày', color: 'var(--mint)', values: perMonth }]} height={180} highlight={5} />
+              <BarChart labels={months} series={[{ name: 'Ngày', color: 'var(--lav)', values: perMonth }]} height={180} highlight={5} />
             </Card>
-            <Card title="Sắp tới" icon="cal">
+            <Card title="Chuyến tiếp theo" icon="cal">
               <div style={{ display: 'grid', gap: 10 }}>{upcoming.map((t) => <TripRow key={t.id} t={t} onOpen={() => setOpenId(t.id)} />)}</div>
             </Card>
           </div>

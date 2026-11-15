@@ -85,7 +85,7 @@ export default function HealthPage() {
 
       <div className="grid g-main" style={{ marginTop: 14 }}>
         <Card title="Lịch sử cân nặng" icon="trend" glow
-          action={<div className="tabs" style={{ margin: 0, padding: 3 }}>{[['30', '30 ngày'], ['90', '90 ngày'], ['all', 'Tất cả']].map(([k, l]) => (
+          action={<div className="tabs seg" style={{ margin: 0, padding: 3 }}>{[['30', '30 ngày'], ['90', '90 ngày'], ['all', 'Tất cả']].map(([k, l]) => (
             <button key={k} className={`tab ${range === k ? 'active' : ''}`} style={{ padding: '5px 10px' }} onClick={() => setRange(k)}>{l}</button>))}</div>}>
           <LineChart data={shown.map((e) => ({ label: dm(e.date), value: e.weight }))} goal={h.goalWeight} format={(v) => `${num(v)} kg`} yFormat={(v) => num(v)} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, flexWrap: 'wrap', gap: 8 }}>

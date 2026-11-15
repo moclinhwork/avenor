@@ -7,6 +7,7 @@ import { Card, Check, PageHead } from '../../ui/common.jsx';
 import { BarChart, Ring } from '../../ui/charts.jsx';
 import Icon from '../../ui/Icon.jsx';
 import { KINDS } from './data.js';
+import Summary from './Summary.jsx';
 
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
@@ -65,6 +66,7 @@ export default function TodayPage() {
   return (
     <div className="fade-in">
       <PageHead title={day === todayIso ? 'Hôm nay' : `${dow(parse(day))}, ${dm(day)}`} subtitle={`${longDate(parse(day))} · gom lịch hẹn, hạn thanh toán, cột mốc và thói quen về một nơi`} />
+      <Summary state={state} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: 6, marginBottom: 16 }}>
         {days.map((x) => {
@@ -119,7 +121,7 @@ export default function TodayPage() {
         </Card>
         <Card title={`Thêm vào ${day === todayIso ? 'hôm nay' : dm(day)}`} icon="plus">
           <form onSubmit={add} style={{ display: 'grid', gap: 10 }}>
-            <div className="tabs" style={{ margin: 0 }}>{[['task', 'Việc cần làm'], ['appt', 'Lịch hẹn']].map(([k, l]) => <button type="button" key={k} className={`tab ${mode === k ? 'active' : ''}`} onClick={() => setMode(k)}>{l}</button>)}</div>
+            <div className="tabs seg" style={{ margin: 0 }}>{[['task', 'Việc cần làm'], ['appt', 'Lịch hẹn']].map(([k, l]) => <button type="button" key={k} className={`tab ${mode === k ? 'active' : ''}`} onClick={() => setMode(k)}>{l}</button>)}</div>
             <div className="field"><label htmlFor="td-title">Nội dung</label><input id="td-title" className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={mode === 'task' ? 'Ví dụ: Gọi cho ngân hàng' : 'Ví dụ: Cà phê với Minh'} /></div>
             {mode === 'task' ? (
               <div className="field"><label htmlFor="td-pr">Mức ưu tiên</label><select id="td-pr" className="input" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option value="normal">Bình thường</option><option value="high">Ưu tiên cao</option></select></div>

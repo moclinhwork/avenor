@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api, SERVER } from './platform.js';
-import { Logo } from '../ui/Icon.jsx';
+import Icon, { Logo } from '../ui/Icon.jsx';
 
 // Chỉ dùng ở bản VPS: bắt đăng nhập trước khi mở app.
 const Ctx = createContext(null);
@@ -33,6 +33,7 @@ export default function AuthGate({ children }) {
   const [form, setForm] = useState({ username: '', password: '', password2: '' });
   const [err, setErr] = useState(hashErr);
   const [busy, setBusy] = useState(false);
+  const [show, setShow] = useState(false);
 
   const load = () => api('/api/me').then((r) => { setMe(r); setMode(r.canSignup && !r.user ? 'signup' : 'login'); setFailed(false); }, () => setFailed(true));
   useEffect(() => { if (SERVER) load(); }, []);
@@ -55,8 +56,8 @@ export default function AuthGate({ children }) {
 
   return (
     <div className="auth-wrap">
-      <form className="card glow auth-card" onSubmit={submit}>
-        <div className="brand" style={{ fontSize: 22 }}><Logo size={30} />Avenor</div>
+      <form className="auth-card" onSubmit={submit}>
+        <div className="auth-logo"><Logo size={88} /><b>Avenor</b></div>
         {failed ? (
           <>
             <p className="muted">Không kết nối được máy chủ Avenor.</p>
@@ -76,16 +77,19 @@ export default function AuthGate({ children }) {
             )}
             {me.password && <>
             <div>
-              <h1 style={{ fontSize: 22, margin: '6px 0 4px' }}>{mode === 'signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</h1>
-              <p className="muted" style={{ fontSize: 13.5 }}>{mode === 'signup' ? (me.canSignup && !me.user ? 'Tài khoản đầu tiên sẽ là chủ của máy chủ này.' : '') : 'Dữ liệu của bạn được lưu trên máy chủ riêng và đồng bộ giữa các thiết bị.'}</p>
+              <h1>{mode === 'signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</h1>
+              {mode === 'signup' && me.canSignup && !me.user && <p className="muted" style={{ fontSize: 13.5, marginTop: 4 }}>Tài khoản đầu tiên sẽ là chủ của máy chủ này.</p>}
             </div>
-            <div className="field"><label htmlFor="a-user">Tên đăng nhập</label><input id="a-user" className="input" autoComplete="username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></div>
-            <div className="field"><label htmlFor="a-pass">Mật khẩu</label><input id="a-pass" className="input" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
-            {mode === 'signup' && <div className="field"><label htmlFor="a-pass2">Nhập lại mật khẩu</label><input id="a-pass2" className="input" type="password" autoComplete="new-password" value={form.password2} onChange={(e) => setForm({ ...form, password2: e.target.value })} required /></div>}
+            <div className="field"><label htmlFor="a-user">Tên đăng nhập</label>
+              <div className="input-icon"><Icon name="user" size={20} /><input id="a-user" className="input" autoComplete="username" autoCapitalize="none" placeholder="Nhập tên đăng nhập" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></div></div>
+            <div className="field"><label htmlFor="a-pass">Mật khẩu</label>
+              <div className="input-icon"><Icon name="lock" size={20} /><input id="a-pass" className="input" type={show ? 'text' : 'password'} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder="Nhập mật khẩu" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required style={{ paddingRight: 48 }} />
+                <button type="button" className="eye" onClick={() => setShow(!show)} aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}><Icon name={show ? 'eyeOff' : 'eye'} size={20} /></button></div></div>
+            {mode === 'signup' && <div className="field"><label htmlFor="a-pass2">Nhập lại mật khẩu</label><div className="input-icon"><Icon name="lock" size={20} /><input id="a-pass2" className="input" type={show ? 'text' : 'password'} autoComplete="new-password" placeholder="Nhập lại mật khẩu" value={form.password2} onChange={(e) => setForm({ ...form, password2: e.target.value })} required /></div></div>}
             {err && <div className="chip rose" style={{ justifySelf: 'start', whiteSpace: 'normal' }}>{err}</div>}
-            <button className="btn block" type="submit" disabled={busy}>{busy ? 'Đang xử lý…' : mode === 'signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</button>
+            <button className="btn block" type="submit" disabled={busy} style={{ marginTop: 12 }}>{busy ? 'Đang xử lý…' : mode === 'signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</button>
             {me.canSignup && (
-              <button type="button" className="btn ghost block" onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setErr(''); }}>
+              <button type="button" className="btn ghost block" style={{ marginTop: 0 }} onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setErr(''); }}>
                 {mode === 'signup' ? 'Đã có tài khoản? Đăng nhập' : 'Tạo tài khoản mới'}
               </button>
             )}

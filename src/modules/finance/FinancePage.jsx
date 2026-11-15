@@ -119,7 +119,7 @@ export default function FinancePage() {
           </Card>
           <Card title="Ghi giao dịch" icon="plus">
             <form onSubmit={addTx} style={{ display: 'grid', gap: 12 }}>
-              <div className="tabs" style={{ margin: 0 }}>
+              <div className="tabs seg" style={{ margin: 0 }}>
                 {[['out', 'Khoản chi'], ['in', 'Khoản thu']].map(([k, l]) => <button type="button" key={k} className={`tab ${form.type === k ? 'active' : ''}`} onClick={() => setForm({ ...form, type: k })}>{l}</button>)}
               </div>
               <div className="field"><label htmlFor="tx-title">Nội dung</label><input id="tx-title" className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ví dụ: Ăn trưa với đồng nghiệp" /></div>

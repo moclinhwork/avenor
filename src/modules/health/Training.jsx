@@ -136,7 +136,7 @@ export default function Training({ h, set, notify }) {
         </Card>
         <Card title="Ghi tay buổi tập" icon="plus">
           <form onSubmit={add} style={{ display: 'grid', gap: 10 }}>
-            <div className="tabs" style={{ margin: 0 }}>{Object.entries(TYPES).map(([k, t]) => <button type="button" key={k} className={`tab ${form.type === k ? 'active' : ''}`} onClick={() => setForm({ ...form, type: k })}>{t.label}</button>)}</div>
+            <div className="tabs seg" style={{ margin: 0 }}>{Object.entries(TYPES).map(([k, t]) => <button type="button" key={k} className={`tab ${form.type === k ? 'active' : ''}`} onClick={() => setForm({ ...form, type: k })}>{t.label}</button>)}</div>
             <div className="field"><label htmlFor="w-date">Ngày</label><input id="w-date" type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
             <div className="form-row">
               <div className="field"><label htmlFor="w-km">Quãng đường (km)</label><input id="w-km" className="input" inputMode="decimal" value={form.km} onChange={(e) => setForm({ ...form, km: e.target.value })} placeholder="5,2" /></div>

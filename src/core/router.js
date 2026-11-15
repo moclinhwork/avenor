@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 // Điều hướng bằng hash (#health, #finance…) để mỗi module có đường dẫn riêng.
 export function useRoute(fallback) {
-  const read = () => (window.location.hash || '').replace('#', '') || fallback;
+  const read = () => (window.location.hash || '').replace('#', '').split('?')[0] || fallback;
   const [route, setRoute] = useState(read);
   useEffect(() => {
     const on = () => { setRoute(read()); window.scrollTo({ top: 0 }); };

@@ -7,10 +7,11 @@ import { byId, GROUPS, MODULES } from './modules/registry.js';
 import Icon, { Logo } from './ui/Icon.jsx';
 import { SYNC_TEXT } from './modules/settings/SettingsPage.jsx';
 
-const TABBAR = ['overview', 'today', 'health', 'finance'];
+// Điện thoại: màn chính là Hôm nay; các module khác mở từ mục "Module".
+const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 979px)').matches;
 
 export default function App() {
-  const route = useRoute('overview');
+  const route = useRoute(isPhone() ? 'today' : 'overview');
   const mod = byId[route] || byId.overview;
   const { state, sync } = useStore();
   const [syncLabel, syncTone] = SYNC_TEXT[sync] || SYNC_TEXT.connecting;
@@ -42,11 +43,26 @@ export default function App() {
 
         <div className="main">
           <header className="topbar">
-            <div className="brand mobile-only"><Logo />Avenor</div>
+            {mod.id === 'today' ? (
+              <div className="brand mobile-only"><Logo />Avenor</div>
+            ) : (
+              <div className="topbar-left mobile-only">
+                <button className="bare-btn" onClick={() => go('today')} aria-label="Về Hôm nay"><Icon name="back" size={22} /></button>
+              </div>
+            )}
             <div className="muted" style={{ fontSize: 13, display: 'flex', gap: 10, alignItems: 'center' }}><span className="desktop-date">{longDate(TODAY)}</span><span className={`chip ${syncTone} desktop-date`}>{syncLabel}</span></div>
-            <button className="icon-btn" onClick={() => go('today')} aria-label={`${pending} việc chưa xong hôm nay`}>
-              <Icon name="bell" size={19} />{pending > 0 && <span className="dot" />}
-            </button>
+            {mod.id === 'today' ? (
+              <button className="icon-btn" onClick={() => go('today')} aria-label={`${pending} việc chưa xong hôm nay`}>
+                <Icon name="bell" size={22} />{pending > 0 && <span className="dot" />}
+              </button>
+            ) : (
+              <>
+                <button className="bare-btn mobile-only" style={{ marginLeft: 0, marginRight: -8 }} onClick={() => setSheet(true)} aria-label="Tất cả module"><Icon name="more" size={22} /></button>
+                <button className="icon-btn desktop-only" onClick={() => go('today')} aria-label={`${pending} việc chưa xong hôm nay`}>
+                  <Icon name="bell" size={22} />{pending > 0 && <span className="dot" />}
+                </button>
+              </>
+            )}
           </header>
           <main className="content" key={mod.id}>
             <Page />
@@ -55,12 +71,11 @@ export default function App() {
       </div>
 
       <nav className="bottomnav" aria-label="Điều hướng chính">
-        {TABBAR.map((id) => { const m = byId[id]; return (
-          <button key={id} className={`bn-item ${mod.id === id ? 'active' : ''}`} onClick={() => open(id)}>
-            <Icon name={m.icon} size={22} />{m.short || m.title}
-          </button>); })}
-        <button className={`bn-item ${!TABBAR.includes(mod.id) ? 'active' : ''}`} onClick={() => setSheet(true)}>
-          <Icon name="grid" size={22} />Thêm
+        <button className={`bn-item ${mod.id === 'today' && !sheet ? 'active' : ''}`} onClick={() => open('today')} aria-current={mod.id === 'today' ? 'page' : undefined}>
+          <Icon name="today" size={24} />Hôm nay
+        </button>
+        <button className={`bn-item ${mod.id !== 'today' || sheet ? 'active' : ''}`} onClick={() => setSheet(true)}>
+          <Icon name="layers" size={24} />Module
         </button>
       </nav>
 
@@ -71,7 +86,7 @@ export default function App() {
             <div className="sheet-grip" />
             <h3 style={{ fontSize: 17, marginBottom: 12 }}>Tất cả module</h3>
             <div className="sheet-grid">
-              {MODULES.filter((m) => !TABBAR.includes(m.id)).map((m) => (
+              {MODULES.map((m) => (
                 <button key={m.id} className={`sheet-item ${m.id === mod.id ? 'active' : ''}`} onClick={() => open(m.id)}>
                   <span className="icon-tile"><Icon name={m.icon} size={20} /></span>{m.short || m.title}
                 </button>

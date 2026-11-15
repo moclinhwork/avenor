@@ -108,7 +108,7 @@ export function YearPlans({ data, set, notify, onMakeTrip }) {
   return (
     <div className="stack">
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div className="tabs" style={{ margin: 0 }}>
+        <div className="tabs seg" style={{ margin: 0 }}>
           {years.map((y) => <button key={y} className={`tab ${year === y ? 'active' : ''}`} onClick={() => { setYear(y); setEditing(null); }}>{y === thisYear ? `Năm nay · ${y}` : `Năm tới · ${y}`}</button>)}
         </div>
         {editing !== 'new' && <button className="btn" onClick={() => setEditing('new')}><Icon name="plus" size={18} />Thêm kế hoạch</button>}
