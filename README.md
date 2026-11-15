@@ -63,7 +63,7 @@ Cập nhật phiên bản mới: `cd /opt/avenor; git pull; bash deploy/install.
 Cấu hình ở `/opt/avenor/.env` (xem `.env.example`), sửa xong chạy `docker compose up -d` trong `/opt/avenor`.
 - `DOMAIN`: tên miền đã trỏ về VPS; Caddy tự cấp HTTPS.
 - `ALLOW_SIGNUP=1` nếu muốn cho người khác tự tạo tài khoản (mặc định chỉ tài khoản đầu tiên).
-- Google: tạo OAuth client tại https://console.cloud.google.com/apis/credentials (Authorized redirect URI `https://<tên miền>/api/auth/google/callback`), rồi chạy `bash deploy/set-google.sh <client-id> <client-secret> <email>`. Khi bật Google, đăng nhập bằng mật khẩu tự tắt (đặt `PASSWORD_LOGIN=1` để giữ).
+- Google: tạo OAuth client tại https://console.cloud.google.com/apis/credentials (Authorized redirect URI `https://<tên miền>/api/auth/google/callback`), rồi chạy `bash deploy/set-google.sh <client-id> <email>` (script hỏi Client secret). Khi bật Google, đăng nhập bằng mật khẩu tự tắt (đặt `PASSWORD_LOGIN=1` để giữ).
 - Strava: tạo app tại https://www.strava.com/settings/api, *Authorization Callback Domain* = tên miền, rồi điền `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`.
 
 Sao lưu: thư mục `/opt/avenor/data`.
