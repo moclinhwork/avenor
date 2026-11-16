@@ -7,6 +7,7 @@ import Icon from '../../ui/Icon.jsx';
 import { DecadePlans, YearPlans } from './Plans.jsx';
 import { SCENES } from './data.js';
 import { CostEditor, ItineraryEditor, PackingEditor } from './TripEditors.jsx';
+import { MediaEditor } from './TripMedia.jsx';
 
 const range = (t) => `${dm(t.start)} – ${dmy(t.end)}`;
 const nights = (t) => daysBetween(parse(t.start), parse(t.end));
@@ -92,11 +93,12 @@ function TripDetail({ trip, onBack, update, onDelete, notify }) {
         ))}
       </div>
 
-      <div style={{ marginTop: 14 }}><Tabs value={tab} onChange={setTab} tabs={[{ id: 'plan', label: 'Lịch trình' }, { id: 'cost', label: 'Chi phí' }, { id: 'pack', label: 'Hành lý' }]} /></div>
+      <div style={{ marginTop: 14 }}><Tabs value={tab} onChange={setTab} tabs={[{ id: 'plan', label: 'Lịch trình' }, { id: 'cost', label: 'Chi phí' }, { id: 'pack', label: 'Hành lý' }, { id: 'media', label: `Vlog & Ảnh${(trip.videos?.length || 0) + (trip.photoLinks?.length || 0) ? ` (${(trip.videos?.length || 0) + (trip.photoLinks?.length || 0)})` : ''}` }]} /></div>
 
       {tab === 'plan' && <ItineraryEditor trip={trip} update={update} notify={notify} />}
       {tab === 'cost' && <CostEditor trip={trip} update={update} notify={notify} />}
       {tab === 'pack' && <PackingEditor trip={trip} update={update} />}
+      {tab === 'media' && <MediaEditor trip={trip} update={update} notify={notify} />}
     </div>
   );
 }
