@@ -11,9 +11,10 @@ import habits from './habits/index.js';
 import documents from './documents/index.js';
 import journal from './journal/index.js';
 import learning from './learning/index.js';
+import ideas from './ideas/index.js';
 import settings from './settings/index.js';
 
-export const MODULES = [overview, today, health, goals, finance, travel, books, habits, documents, journal, learning, settings];
+export const MODULES = [overview, today, health, ideas, goals, finance, travel, books, habits, documents, journal, learning, settings];
 export const byId = Object.fromEntries(MODULES.map((m) => [m.id, m]));
 export const GROUPS = [
   { id: 'main', label: 'Tổng hợp' },

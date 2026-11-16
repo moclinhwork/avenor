@@ -3,12 +3,15 @@ package vn.moclinh.avenor;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.Manifest;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.webkit.CookieManager;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -21,6 +24,8 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
     private static final String HOME = "https://avenor.moclinh.vn/";
     private static final int PICK_FILE = 1;
+    private static final int MIC = 2;
+    private PermissionRequest micRequest;
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
 
@@ -38,7 +43,7 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setAllowFileAccess(false);
         s.setMediaPlaybackRequiresUserGesture(true);
-        s.setUserAgentString(s.getUserAgentString() + " AvenorAndroid/1.0");
+        s.setUserAgentString(s.getUserAgentString() + " AvenorAndroid/1.1");
 
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(true);
@@ -68,6 +73,22 @@ public class MainActivity extends Activity {
         });
 
         web.setWebChromeClient(new WebChromeClient() {
+            /** Trang Avenor xin micro (ghi ý tưởng): hỏi quyền Android nếu chưa có rồi cấp cho trang. */
+            @Override
+            public void onPermissionRequest(final PermissionRequest req) {
+                String host = req.getOrigin() == null ? "" : String.valueOf(req.getOrigin().getHost());
+                boolean audio = false;
+                for (String r : req.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) audio = true;
+                if (!audio || !host.equals("avenor.moclinh.vn")) { req.deny(); return; }
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    req.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE });
+                } else {
+                    if (micRequest != null) micRequest.deny();
+                    micRequest = req;
+                    requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, MIC);
+                }
+            }
+
             @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> cb, FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
@@ -121,6 +142,18 @@ public class MainActivity extends Activity {
             return;
         }
         super.onActivityResult(req, res, data);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int req, String[] perms, int[] results) {
+        if (req == MIC && micRequest != null) {
+            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+                micRequest.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE });
+            } else {
+                micRequest.deny();
+            }
+            micRequest = null;
+        }
     }
 
     @Override

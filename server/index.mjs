@@ -1,10 +1,11 @@
 // Máy chủ Avenor cho VPS: phục vụ giao diện (dist/), đăng nhập, lưu dữ liệu theo tài khoản,
-// ảnh tải lên và đồng bộ Strava qua Strava API. Không cần thư viện ngoài (Node >= 22.13).
+// ảnh tải lên, ghi âm ý tưởng (chép lời bằng Whisper) và đồng bộ Strava qua Strava API. Không cần thư viện ngoài (Node >= 22.13).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { makeQueue, transcribeFile } from './transcribe.mjs';
 
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
@@ -23,6 +24,7 @@ const ALLOWED_EMAILS = String(process.env.ALLOWED_EMAILS || '').split(',').map((
 const PASSWORD_LOGIN = process.env.PASSWORD_LOGIN ? process.env.PASSWORD_LOGIN === '1' : !GOOGLE;
 
 fs.mkdirSync(path.join(DATA_DIR, 'photos'), { recursive: true });
+fs.mkdirSync(path.join(DATA_DIR, 'audio'), { recursive: true });
 const db = new DatabaseSync(path.join(DATA_DIR, 'avenor.db'));
 db.exec(`
   PRAGMA journal_mode = WAL;
@@ -32,10 +34,27 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS docs (user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, id TEXT NOT NULL, json TEXT NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY (user_id, id));
   CREATE TABLE IF NOT EXISTS strava (user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, athlete TEXT, access TEXT NOT NULL, refresh TEXT NOT NULL, expires INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS photos (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, type TEXT NOT NULL, created INTEGER NOT NULL);
+  CREATE TABLE IF NOT EXISTS audio (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, type TEXT NOT NULL, created INTEGER NOT NULL, status TEXT NOT NULL, text TEXT, error TEXT, updated INTEGER NOT NULL);
 `);
 db.prepare('DELETE FROM sessions WHERE expires < ?').run(Date.now());
 if (!db.prepare("SELECT 1 FROM pragma_table_info('users') WHERE name = 'email'").get()) db.exec('ALTER TABLE users ADD COLUMN email TEXT');
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users(email)');
+
+// ---------- chép lời ý tưởng ----------
+const audioFile = (id) => path.join(DATA_DIR, 'audio', id);
+const enqueueStt = makeQueue(async (id) => {
+  const row = db.prepare('SELECT id FROM audio WHERE id = ?').get(id);
+  if (!row) return;
+  db.prepare("UPDATE audio SET status = 'working', error = NULL, updated = ? WHERE id = ?").run(Date.now(), id);
+  try {
+    const text = await transcribeFile(DATA_DIR, audioFile(id));
+    db.prepare("UPDATE audio SET status = 'done', text = ?, error = NULL, updated = ? WHERE id = ?").run(text, Date.now(), id);
+  } catch (e) {
+    db.prepare("UPDATE audio SET status = 'error', error = ?, updated = ? WHERE id = ?").run(String(e.message || e).slice(0, 300), Date.now(), id);
+  }
+});
+// Máy chủ khởi động lại giữa chừng: chép tiếp những bản đang chờ.
+for (const r of db.prepare("SELECT id FROM audio WHERE status IN ('pending','working') ORDER BY created").all()) enqueueStt(r.id);
 
 // ---------- tiện ích ----------
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
@@ -234,6 +253,58 @@ async function api(req, res, url) {
     if (m === 'DELETE') { fs.rmSync(file, { force: true }); db.prepare('DELETE FROM photos WHERE id = ?').run(row.id); return send(res, 200, { ok: true }); }
   }
 
+  // Ý tưởng: bản ghi âm + chép lời
+  if (p === '/api/audio' && m === 'POST') {
+    const type = String(req.headers['content-type'] || '').split(';')[0].trim();
+    if (!/^audio\/(webm|ogg|mp4|mpeg|wav|x-m4a|aac)$/.test(type)) return fail(res, 415, 'not_audio');
+    const buf = await readBody(req, 40 << 20);
+    if (buf.length < 200) return fail(res, 400, 'empty_audio');
+    const id = newId();
+    fs.writeFileSync(audioFile(id), buf);
+    const now = Date.now();
+    db.prepare("INSERT INTO audio (id, user_id, type, created, status, updated) VALUES (?, ?, ?, ?, 'pending', ?)").run(id, user.id, type, now, now);
+    enqueueStt(id);
+    return send(res, 200, { id, url: `/api/audio/${id}`, status: 'pending' });
+  }
+  if (p === '/api/audio/status' && m === 'POST') {
+    const { ids } = await readJson(req, 64 << 10);
+    const list = Array.isArray(ids) ? ids.slice(0, 200).map(String) : [];
+    const out = {};
+    for (const id of list) {
+      const r = db.prepare('SELECT status, text, error FROM audio WHERE id = ? AND user_id = ?').get(id, user.id);
+      out[id] = r ? { status: r.status, text: r.text || '', error: r.error || '' } : { status: 'missing' };
+    }
+    return send(res, 200, { items: out });
+  }
+  const am = p.match(/^\/api\/audio\/([A-Za-z0-9_-]{8,40})(\/transcribe)?$/);
+  if (am) {
+    const row = db.prepare('SELECT * FROM audio WHERE id = ? AND user_id = ?').get(am[1], user.id);
+    if (!row) return fail(res, 404, 'not_found');
+    const file = audioFile(row.id);
+    if (am[2] && m === 'POST') {
+      db.prepare("UPDATE audio SET status = 'pending', error = NULL, updated = ? WHERE id = ?").run(Date.now(), row.id);
+      enqueueStt(row.id);
+      return send(res, 200, { status: 'pending' });
+    }
+    if (!am[2] && m === 'GET') {
+      // Hỗ trợ Range để tua được trong trình phát.
+      const size = fs.statSync(file).size;
+      const range = /bytes=(\d*)-(\d*)/.exec(String(req.headers.range || ''));
+      const base = { 'Content-Type': row.type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'private, max-age=31536000, immutable' };
+      if (range && (range[1] || range[2])) {
+        let start = range[1] ? Number(range[1]) : size - Number(range[2]);
+        let end = range[1] && range[2] ? Number(range[2]) : size - 1;
+        start = Math.max(0, start); end = Math.min(size - 1, end);
+        if (start > end) { res.writeHead(416, { 'Content-Range': `bytes */${size}` }); return res.end(); }
+        res.writeHead(206, { ...base, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': end - start + 1 });
+        return fs.createReadStream(file, { start, end }).pipe(res);
+      }
+      res.writeHead(200, { ...base, 'Content-Length': size });
+      return fs.createReadStream(file).pipe(res);
+    }
+    if (!am[2] && m === 'DELETE') { fs.rmSync(file, { force: true }); db.prepare('DELETE FROM audio WHERE id = ?').run(row.id); return send(res, 200, { ok: true }); }
+  }
+
   // Strava
   if (p === '/api/strava/status' && m === 'GET') {
     const row = db.prepare('SELECT athlete FROM strava WHERE user_id = ?').get(user.id);
@@ -294,7 +365,7 @@ const SEC_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'same-origin',
   'X-Frame-Options': 'DENY',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self'; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'",
 };
 function serveStatic(req, res, url) {
   let rel = decodeURIComponent(url.pathname);

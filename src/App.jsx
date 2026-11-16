@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from './core/store.jsx';
 import { collectAgenda } from './core/agenda.js';
 import { longDate, TODAY, todayIso } from './core/format.js';
@@ -6,6 +6,8 @@ import { go, useRoute } from './core/router.js';
 import { byId, GROUPS, MODULES } from './modules/registry.js';
 import Icon, { Logo } from './ui/Icon.jsx';
 import { SYNC_TEXT } from './modules/settings/SettingsPage.jsx';
+import CaptureIdea from './modules/ideas/CaptureIdea.jsx';
+import { openCapture, useIdeasBackground } from './modules/ideas/background.js';
 
 // Điện thoại: màn chính là Hôm nay; các module khác mở từ mục "Module".
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 979px)').matches;
@@ -19,6 +21,13 @@ export default function App() {
   const pending = collectAgenda(state, todayIso).filter((i) => !i.done).length;
   const Page = mod.Page;
   const open = (id) => { setSheet(false); go(id); };
+  const [capture, setCapture] = useState(false);
+  useIdeasBackground();
+  useEffect(() => {
+    const on = () => { setSheet(false); setCapture(true); };
+    window.addEventListener('avenor:capture', on);
+    return () => window.removeEventListener('avenor:capture', on);
+  }, []);
 
   return (
     <div className="app">
@@ -74,10 +83,15 @@ export default function App() {
         <button className={`bn-item ${mod.id === 'today' && !sheet ? 'active' : ''}`} onClick={() => open('today')} aria-current={mod.id === 'today' ? 'page' : undefined}>
           <Icon name="today" size={24} />Hôm nay
         </button>
+        <div className="bn-mic-wrap">
+          <button className="bn-mic" onClick={openCapture} aria-label="Ghi ý tưởng"><Icon name="mic" size={28} stroke={2.2} /></button>
+        </div>
         <button className={`bn-item ${mod.id !== 'today' || sheet ? 'active' : ''}`} onClick={() => setSheet(true)}>
           <Icon name="layers" size={24} />Module
         </button>
       </nav>
+
+      {capture && <CaptureIdea onClose={() => setCapture(false)} />}
 
       {sheet && (
         <>

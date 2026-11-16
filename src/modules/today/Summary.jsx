@@ -6,6 +6,7 @@ import Icon from '../../ui/Icon.jsx';
 import { monthTx, totals } from '../finance/data.js';
 import { progress } from '../goals/data.js';
 import { finishedIn } from '../books/data.js';
+import { openCapture } from '../ideas/background.js';
 
 // Phần đầu màn Hôm nay: thu chi tháng và ô tóm tắt các module chính.
 export default function Summary({ state }) {
@@ -29,7 +30,10 @@ export default function Summary({ state }) {
   const read = books ? finishedIn(books.books, TODAY.getFullYear()).length : 0;
   const trip = (state.travel?.trips || []).filter((t) => daysFromToday(t.start) >= 0).sort((a, b) => a.start.localeCompare(b.start))[0];
 
+  const ideas = state.ideas?.ideas || [];
+  const inbox = ideas.filter((x) => x.categoryId === 'inbox' && !x.done).length;
   const tiles = [
+    { id: 'ideas', icon: 'bulb', label: 'Ý tưởng', value: `${ideas.length}`, sub: inbox ? `${inbox} chờ phân loại` : 'đã phân loại hết' },
     { id: 'health', icon: 'heart', label: 'Sức khỏe', value: lastW != null ? `${num(lastW)} kg` : '—' },
     { id: 'goals', icon: 'target', label: 'Mục tiêu', value: `${goalsDone} / ${goals.length}`, sub: 'đã hoàn thành' },
     { id: 'books', icon: 'book', label: 'Đọc sách', value: `${read} / ${books?.yearGoal || 0}`, sub: `cuốn năm ${TODAY.getFullYear()}` },
@@ -59,6 +63,13 @@ export default function Summary({ state }) {
       </section>
 
       <div className="tiles">
+        <button className="tile tile-capture" onClick={openCapture}>
+          <span className="icon-tile"><Icon name="mic" size={18} /></span>
+          <span className="tile-main">
+            <span className="tile-label" style={{ display: 'block' }}>Ghi ý tưởng</span>
+            <span className="tile-sub" style={{ display: 'block' }}>Nói, bấm Xong là lưu</span>
+          </span>
+        </button>
         {tiles.map((t) => (
           <button key={t.id} className="tile" onClick={() => go(t.id)}>
             <span className="icon-tile"><Icon name={t.icon} size={18} /></span>
