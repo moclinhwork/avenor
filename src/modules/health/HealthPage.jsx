@@ -6,6 +6,7 @@ import { LineChart, Ring } from '../../ui/charts.jsx';
 import Icon from '../../ui/Icon.jsx';
 import { bmi, bmiLabel, bpClass, initial } from './data.js';
 import Training from './Training.jsx';
+import Pickleball from './Pickleball.jsx';
 
 const toNum = (v) => parseFloat(String(v).replace(',', '.'));
 const nowTime = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
@@ -72,9 +73,9 @@ export default function HealthPage() {
   return (
     <div className="fade-in">
       <PageHead title="Sức khỏe" subtitle="Theo dõi các chỉ số chính, huyết áp và quãng đường tập luyện." />
-      <Tabs tabs={[{ id: 'metrics', label: 'Chỉ số' }, { id: 'training', label: 'Tập luyện' }]} value={tab} onChange={setTab} />
+      <Tabs tabs={[{ id: 'metrics', label: 'Chỉ số' }, { id: 'training', label: 'Tập luyện' }, { id: 'pickleball', label: 'Pickleball' }]} value={tab} onChange={setTab} />
 
-      {tab === 'training' ? <Training h={h} set={set} notify={notify} /> : <>
+      {tab === 'pickleball' ? <Pickleball h={h} set={set} notify={notify} /> : tab === 'training' ? <Training h={h} set={set} notify={notify} /> : <>
 
       <div className="grid g4">
         <StatCard icon="scale" label="Cân nặng" value={num(last.weight)} unit="kg" foot={<Delta value={+(last.weight - first.weight).toFixed(1)} unit=" kg" />} />
