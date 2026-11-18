@@ -596,3 +596,34 @@ p { margin: 0; }
 .hb-icons { display: flex; flex-wrap: wrap; gap: 6px; }
 .hb-icon { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); display: grid; place-items: center; }
 .hb-icon.on { border-color: var(--mint); background: var(--mint-soft); color: var(--mint); }
+
+/* ---------- Sức khỏe: Tập luyện (gọn cho điện thoại) ---------- */
+.tr { max-width: 720px; }
+.tr-hero { display: grid; gap: 14px; }
+.tr-hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.tr-label { font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.tr-big { font-size: 44px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.tr-big small { font-size: 18px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+.tr-strava { display: grid; justify-items: center; gap: 2px; padding: 8px 12px; border-radius: 14px; border: 1px dashed var(--line-strong); background: var(--surface-3); color: var(--faint); font-size: 12px; font-weight: 600; opacity: 0.7; cursor: not-allowed; }
+.tr-strava em { font-style: normal; font-size: 10.5px; font-weight: 500; }
+.tr-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tr-split-cell { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; row-gap: 2px; padding: 10px 12px; border-radius: var(--r-md); background: color-mix(in srgb, var(--c) 10%, var(--surface)); color: var(--c); }
+.tr-split-cell span { font-size: 13px; font-weight: 600; }
+.tr-split-cell b { grid-column: 1 / -1; font-size: 20px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.tr-split-cell small { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+.tr-log .tabs.seg .tab { display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: 1 1 0; font-size: 13.5px; padding: 9px 6px; }
+.tr-km { position: relative; }
+.tr-km .input { min-height: 64px; font-size: 32px; font-weight: 800; text-align: center; padding-right: 54px; padding-left: 54px; font-variant-numeric: tabular-nums; }
+.tr-km span { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 600; font-size: 16px; }
+.tr-quick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tr-quick .chip { border: 1px solid var(--line-strong); background: var(--surface); padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.tr-quick .chip.mint { border-color: var(--mint-border); background: var(--mint-soft); }
+.tr-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tr-stats > div { display: grid; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); min-width: 0; }
+.tr-stats span { font-size: 12.5px; color: var(--muted); }
+.tr-stats b { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tr-stats small { font-size: 12px; color: var(--muted); }
+@media (min-width: 640px) { .tr-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tr-row { gap: 10px; }
+.tr-dot { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); }
+.tr-row-main { border: 0; background: none; padding: 0; text-align: left; color: var(--text); font: inherit; cursor: pointer; }
