@@ -673,3 +673,27 @@ p { margin: 0; }
   .ls-weights, .ls-parts { margin-left: 0; }
   .brief-greet { font-size: 18px; }
 }
+
+/* ---------- Life Command ---------- */
+.sheet.cmd { max-width: 640px; margin: 0 auto; }
+@media (min-width: 980px) { .sheet.cmd { bottom: auto; top: 12vh; border-radius: 24px; border: 1px solid var(--line-strong); } }
+.cmd-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cmd-input { display: grid; gap: 10px; }
+.cmd-input textarea { resize: none; font-size: 16px; }
+.cmd-btns { display: flex; justify-content: flex-end; gap: 10px; align-items: center; }
+.cmd-mic { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface); color: var(--mint); display: grid; place-items: center; cursor: pointer; }
+.cmd-mic.on { width: 76px; height: 76px; background: var(--mint); border: 0; box-shadow: 0 0 0 10px var(--mint-soft); animation: briefPulse 1.4s ease-in-out infinite; }
+.cmd-listen { display: grid; justify-items: center; gap: 18px; padding: 24px 0 12px; color: var(--muted); font-size: 14px; }
+.cmd-examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.cmd-examples .chip { border: 0; cursor: pointer; font-size: 12.5px; }
+.cmd-review { display: grid; gap: 8px; }
+.cmd-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; }
+.cmd-item input { width: 20px; height: 20px; accent-color: var(--mint); flex-shrink: 0; }
+.cmd-item.bad { border-color: var(--rose-border); opacity: .85; }
+.cmd-item.bad .cmd-item-sub { color: var(--rose); }
+.cmd-item .icon-tile { width: 34px; height: 34px; }
+.cmd-item-main { display: grid; min-width: 0; }
+.cmd-item-title { font-weight: 500; font-size: 14.5px; }
+.cmd-item-sub { font-size: 12.5px; color: var(--muted); }
+.cmd-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 8px; }
+.cmd-done { display: grid; justify-items: center; gap: 6px; padding: 12px 0 4px; text-align: center; }

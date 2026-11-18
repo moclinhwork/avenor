@@ -6,7 +6,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { makeQueue, transcribeFile } from './transcribe.mjs';
-import { aiEnabled, AI_MODEL, briefing } from './ai.mjs';
+import { aiEnabled, AI_MODEL, briefing, command } from './ai.mjs';
 
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
@@ -308,6 +308,7 @@ async function api(req, res, url) {
 
   // Trợ lý AI (Claude API)
   if (p === '/api/ai/briefing' && m === 'POST') return send(res, 200, await briefing(user.id, await readJson(req, 64 << 10)));
+  if (p === '/api/ai/command' && m === 'POST') return send(res, 200, await command(user.id, await readJson(req, 64 << 10)));
 
   // Strava
   if (p === '/api/strava/status' && m === 'GET') {

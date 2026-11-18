@@ -7,6 +7,7 @@ import { go } from '../../core/router.js';
 import { aiPayload, deltaSince, ruleBriefing, scoreWord } from '../../core/life.js';
 import Icon from '../../ui/Icon.jsx';
 import { ScoreRing } from './LifePage.jsx';
+import { openCommand } from './CommandSheet.jsx';
 import { useLife } from './useLife.js';
 
 const ERR = {
@@ -93,6 +94,7 @@ export default function Briefing() {
             <Icon name="refresh" size={13} />{busy ? 'Đang viết…' : stale ? 'Dữ liệu mới · viết lại' : brief?.text ? 'Viết lại' : 'Viết bằng AI'}
           </button>
         )}
+        {ai && <button className="link" onClick={openCommand}><Icon name="sparkle" size={13} />Ra lệnh</button>}
         {brief?.text && <span className="chip" style={{ marginLeft: 'auto' }}>Claude AI</span>}
       </div>
       {err && <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>{err}</div>}

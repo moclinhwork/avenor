@@ -8,6 +8,8 @@ import Icon, { Logo } from './ui/Icon.jsx';
 import { SYNC_TEXT } from './modules/settings/SettingsPage.jsx';
 import CaptureIdea from './modules/ideas/CaptureIdea.jsx';
 import { openCapture, useIdeasBackground } from './modules/ideas/background.js';
+import CommandSheet, { openCommand } from './modules/life/CommandSheet.jsx';
+import { useAccount } from './core/AuthGate.jsx';
 
 // Điện thoại: màn chính là Hôm nay; các module khác mở từ mục "Module".
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 979px)').matches;
@@ -22,11 +24,15 @@ export default function App() {
   const Page = mod.Page;
   const open = (id) => { setSheet(false); go(id); };
   const [capture, setCapture] = useState(false);
+  const [command, setCommand] = useState(false);
+  const ai = !!useAccount()?.ai;
   useIdeasBackground();
   useEffect(() => {
     const on = () => { setSheet(false); setCapture(true); };
+    const onCmd = () => { setSheet(false); setCommand(true); };
     window.addEventListener('avenor:capture', on);
-    return () => window.removeEventListener('avenor:capture', on);
+    window.addEventListener('avenor:command', onCmd);
+    return () => { window.removeEventListener('avenor:capture', on); window.removeEventListener('avenor:command', onCmd); };
   }, []);
 
   return (
@@ -60,6 +66,7 @@ export default function App() {
               </div>
             )}
             <div className="muted" style={{ fontSize: 13, display: 'flex', gap: 10, alignItems: 'center' }}><span className="desktop-date">{longDate(TODAY)}</span><span className={`chip ${syncTone} desktop-date`}>{syncLabel}</span></div>
+            {ai && <button className="icon-btn" style={{ marginRight: 8 }} onClick={openCommand} aria-label="Ra lệnh cho Avenor" title="Ra lệnh cho Avenor"><Icon name="sparkle" size={21} /></button>}
             {mod.id === 'today' ? (
               <button className="icon-btn" onClick={() => go('today')} aria-label={`${pending} việc chưa xong hôm nay`}>
                 <Icon name="bell" size={22} />{pending > 0 && <span className="dot" />}
@@ -92,6 +99,7 @@ export default function App() {
       </nav>
 
       {capture && <CaptureIdea onClose={() => setCapture(false)} />}
+      {command && <CommandSheet onClose={() => setCommand(false)} />}
 
       {sheet && (
         <>
