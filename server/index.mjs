@@ -1,11 +1,12 @@
 // Máy chủ Avenor cho VPS: phục vụ giao diện (dist/), đăng nhập, lưu dữ liệu theo tài khoản,
-// ảnh tải lên, ghi âm ý tưởng (chép lời bằng Whisper) và đồng bộ Strava qua Strava API. Không cần thư viện ngoài (Node >= 22.13).
+// ảnh tải lên, ghi âm ý tưởng (chép lời bằng Whisper), trợ lý AI (Claude API) và đồng bộ Strava. Node >= 22.13; thư viện ngoài duy nhất là @anthropic-ai/sdk (không có thì tắt AI).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { makeQueue, transcribeFile } from './transcribe.mjs';
+import { aiEnabled, AI_MODEL, briefing } from './ai.mjs';
 
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
@@ -141,7 +142,7 @@ async function api(req, res, url) {
   if (p === '/api/me' && m === 'GET') {
     const u = sessionUser(req);
     const users = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
-    return send(res, 200, { user: u, canSignup: PASSWORD_LOGIN && (ALLOW_SIGNUP || users === 0), password: PASSWORD_LOGIN, google: GOOGLE, strava: !!(STRAVA_ID && STRAVA_SECRET) });
+    return send(res, 200, { user: u, canSignup: PASSWORD_LOGIN && (ALLOW_SIGNUP || users === 0), password: PASSWORD_LOGIN, google: GOOGLE, strava: !!(STRAVA_ID && STRAVA_SECRET), ai: aiEnabled() ? { model: AI_MODEL } : null });
   }
   if (p === '/api/auth/google' && m === 'GET') {
     if (!GOOGLE) return fail(res, 503, 'google_not_configured');
@@ -304,6 +305,9 @@ async function api(req, res, url) {
     }
     if (!am[2] && m === 'DELETE') { fs.rmSync(file, { force: true }); db.prepare('DELETE FROM audio WHERE id = ?').run(row.id); return send(res, 200, { ok: true }); }
   }
+
+  // Trợ lý AI (Claude API)
+  if (p === '/api/ai/briefing' && m === 'POST') return send(res, 200, await briefing(user.id, await readJson(req, 64 << 10)));
 
   // Strava
   if (p === '/api/strava/status' && m === 'GET') {

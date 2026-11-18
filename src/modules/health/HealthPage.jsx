@@ -15,7 +15,7 @@ export default function HealthPage() {
   const [h, set] = useModule('health');
   const notify = useNotify();
   const [range, setRange] = useState('30');
-  const [tab, setTab] = useState('metrics');
+  const [tab, setTab] = useState(() => (['training', 'pickleball'].includes(new URLSearchParams(window.location.hash.split('?')[1] || '').get('tab')) ? new URLSearchParams(window.location.hash.split('?')[1]).get('tab') : 'metrics'));
   const [form, setForm] = useState({ date: todayIso, weight: '', waist: '' });
   const [bpForm, setBpForm] = useState({ date: todayIso, time: nowTime(), sys: '', dia: '', pulse: '' });
   const [hEdit, setHEdit] = useState(null);

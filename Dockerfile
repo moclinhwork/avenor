@@ -16,12 +16,14 @@ RUN git clone --depth 1 --branch ${WHISPER_VERSION} https://github.com/ggml-org/
  && cmake --build /w/build -j"$(nproc)" --target whisper-cli \
  && cp /w/build/bin/whisper-cli /usr/local/bin/whisper-cli
 
-# Bước 3: máy chủ chạy app (không cần thư viện npm ngoài)
+# Bước 3: máy chủ chạy app (thư viện ngoài duy nhất: @anthropic-ai/sdk cho trợ lý AI)
 FROM node:22-alpine
 RUN apk add --no-cache ffmpeg libstdc++ libgomp
 COPY --from=whisper /usr/local/bin/whisper-cli /usr/local/bin/whisper-cli
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 DATA_DIR=/data STATIC_DIR=/app/dist NODE_OPTIONS=--disable-warning=ExperimentalWarning
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY server ./server
 COPY --from=build /app/dist ./dist
 RUN mkdir -p /data && chown node:node /data

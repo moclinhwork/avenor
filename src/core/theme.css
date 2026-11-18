@@ -627,3 +627,49 @@ p { margin: 0; }
 .tr-row { gap: 10px; }
 .tr-dot { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); }
 .tr-row-main { border: 0; background: none; padding: 0; text-align: left; color: var(--text); font: inherit; cursor: pointer; }
+
+/* ---------- Bản tin hôm nay & Life Score ---------- */
+.brief { background: linear-gradient(160deg, var(--mint-soft), var(--surface) 55%); }
+.brief-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.brief-kicker { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--mint); text-transform: uppercase; letter-spacing: .04em; }
+.brief-greet { font-size: 20px; font-weight: 700; margin-top: 2px; }
+.brief-score { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: inherit; text-align: left; cursor: pointer; flex-shrink: 0; }
+.brief-score-label { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
+.brief-score-label b { color: var(--text); font-weight: 600; }
+.brief-ai { margin: 12px 0 0; font-size: 15px; line-height: 1.6; }
+.brief-loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+.brief-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); animation: briefPulse 1s ease-in-out infinite; }
+@keyframes briefPulse { 50% { opacity: .25; } }
+.brief-list { display: grid; gap: 6px; margin-top: 12px; }
+.brief-item { display: flex; gap: 10px; align-items: flex-start; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font: inherit; font-size: 13.5px; line-height: 1.45; color: var(--text); cursor: pointer; }
+.brief-item svg { flex-shrink: 0; margin-top: 2px; color: var(--mint); }
+.brief-item.amber svg { color: var(--amber); }
+.brief-item.rose svg { color: var(--rose); }
+.brief-item.rose { border-color: var(--rose-border); }
+.brief-item.good svg { color: var(--good); }
+.brief-item.focus { background: var(--amber-soft); border-color: transparent; }
+.brief-item.focus svg { color: var(--amber); }
+.brief-foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.brief-foot .link svg { margin-right: 3px; }
+.ls-hero { display: flex; align-items: center; gap: 18px; }
+.ls-focus { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 14px; font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--line); }
+.ls-list { display: grid; gap: 4px; }
+.ls-row { border-bottom: 1px solid var(--line); padding: 6px 0; }
+.ls-row:last-child { border-bottom: 0; }
+.ls-row-head { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: 0; padding: 4px 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.ls-row-main { flex: 1; min-width: 0; display: grid; gap: 7px; }
+.ls-row-title { font-weight: 500; font-size: 14.5px; }
+.ls-bar { display: block; height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.ls-bar span { display: block; height: 100%; border-radius: 99px; transition: width .4s; }
+.ls-row-score { font-size: 19px; font-weight: 700; min-width: 32px; text-align: right; }
+.ls-weights { margin: 6px 0 4px 52px; padding: 3px; }
+.ls-weights .tab { padding: 5px 12px; flex: 1; }
+.ls-parts { margin: 4px 0 6px 52px; display: grid; gap: 6px; }
+.ls-part { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; font-size: 13.5px; padding: 8px 10px; background: var(--surface-3); border-radius: 10px; }
+.ls-part .faint { grid-column: 1; font-size: 12.5px; }
+.ls-part .num { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: 16px; }
+@media (max-width: 480px) {
+  .ls-hero { gap: 14px; }
+  .ls-weights, .ls-parts { margin-left: 0; }
+  .brief-greet { font-size: 18px; }
+}
