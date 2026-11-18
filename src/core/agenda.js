@@ -5,7 +5,7 @@ import { todayIso } from './format.js';
 export function collectAgenda(state, date) {
   const isToday = date === todayIso;
   return MODULES.filter((m) => m.agenda && state[m.id]).flatMap((m) =>
-    m.agenda(state[m.id], date, isToday).map((it) => ({ ...it, moduleTitle: m.short || m.title })));
+    m.agenda(state[m.id], date, isToday, state).map((it) => ({ ...it, moduleTitle: m.short || m.title })));
 }
 
 // Gom các mốc thời gian (lịch hẹn, hạn thanh toán, ngày đi…) từ mọi module có `events`.

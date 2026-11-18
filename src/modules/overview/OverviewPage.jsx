@@ -10,6 +10,7 @@ import { onTrack as isOnTrack, progress } from '../goals/data.js';
 import { finishedIn } from '../books/data.js';
 import { status as docStatus } from '../documents/data.js';
 import { weekCount } from '../habits/HabitsPage.jsx';
+import { effectiveAll } from '../habits/link.js';
 import { AgendaList } from '../today/TodayPage.jsx';
 import { KINDS } from '../today/data.js';
 
@@ -17,7 +18,8 @@ const More = ({ to, label = 'Xem' }) => <button className="link" onClick={() => 
 
 export default function OverviewPage() {
   const { state, update } = useStore();
-  const { health, finance, goals, books, travel, habits, documents, journal, learning } = state;
+  const { health, finance, goals, books, travel, documents, journal, learning } = state;
+  const habits = { ...state.habits, habits: effectiveAll(state.habits, state.health) };
 
   // Sức khỏe
   const hs = [...health.entries].sort((a, b) => a.date.localeCompare(b.date));

@@ -588,3 +588,11 @@ p { margin: 0; }
 .pb-steps .tab { flex: 1 1 0; padding-left: 6px; padding-right: 6px; }
 .pb-short { display: none; }
 @media (max-width: 479px) { .pb-long:has(+ .pb-short) { display: none; } .pb-short { display: inline; } }
+
+/* ---------- Thói quen: tự tích từ Sức khỏe, sửa danh mục ---------- */
+.hb-auto { background: var(--lav) !important; border-color: var(--lav) !important; }
+.hb-linked { margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--lav-soft); color: var(--lav); font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+.hb-form { padding: 12px; margin: 4px 0 8px; border-radius: var(--r-md); background: var(--surface-3); }
+.hb-icons { display: flex; flex-wrap: wrap; gap: 6px; }
+.hb-icon { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); display: grid; place-items: center; }
+.hb-icon.on { border-color: var(--mint); background: var(--mint-soft); color: var(--mint); }
