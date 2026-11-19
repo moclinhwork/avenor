@@ -59,7 +59,9 @@ export default function SettingsPage() {
   const [backup, setBackup] = useState('');
   const fileRef = useRef(null);
   const [label, tone] = SYNC_TEXT[sync] || SYNC_TEXT.connecting;
-  const json = () => JSON.stringify({ app: 'avenor', version: 1, exportedAt: new Date().toISOString(), data: state }, null, 2);
+  // Gợi nhớ mật khẩu của module Accounts không bao giờ nằm trong file sao lưu.
+  const exportable = () => (state.accounts ? { ...state, accounts: { ...state.accounts, accounts: state.accounts.accounts.map((a) => ({ ...a, passwordHint: '' })) } } : state);
+  const json = () => JSON.stringify({ app: 'avenor', version: 1, exportedAt: new Date().toISOString(), data: exportable() }, null, 2);
 
   const exportFile = async () => {
     const text = json();
@@ -85,7 +87,13 @@ export default function SettingsPage() {
     try {
       const parsed = JSON.parse(await f.text());
       if (parsed?.app !== 'avenor' || typeof parsed.data !== 'object') throw new Error('bad');
-      replaceAll(parsed.data, 'Đã khôi phục từ file sao lưu');
+      const data = parsed.data || {};
+      // File sao lưu không chứa gợi nhớ mật khẩu: giữ gợi nhớ đang có trên máy cho các tài khoản trùng id.
+      if (data.accounts?.accounts && state.accounts?.accounts) {
+        const hints = Object.fromEntries(state.accounts.accounts.map((a) => [a.id, a.passwordHint]));
+        data.accounts = { ...data.accounts, accounts: data.accounts.accounts.map((a) => (a.passwordHint ? a : { ...a, passwordHint: hints[a.id] || '' })) };
+      }
+      replaceAll(data, 'Đã khôi phục từ file sao lưu');
     } catch { notify('File không phải bản sao lưu Avenor hợp lệ'); }
   };
 
