@@ -697,3 +697,13 @@ p { margin: 0; }
 .cmd-item-sub { font-size: 12.5px; color: var(--muted); }
 .cmd-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 8px; }
 .cmd-done { display: grid; justify-items: center; gap: 6px; padding: 12px 0 4px; text-align: center; }
+
+/* ---------- Mục tiêu: sửa mục tiêu & cột mốc ---------- */
+.gl-edit { display: grid; gap: 10px; padding: 12px; margin-bottom: 10px; border-radius: 14px; background: var(--surface-3); }
+.gl-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn.ghost.danger { color: var(--rose); border-color: var(--rose-border); }
+.gl-ms-btn { all: unset; cursor: pointer; flex: 1; min-width: 0; }
+.gl-pen { color: var(--faint); padding: 6px; }
+.gl-ms-edit { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px; border-radius: 12px; background: var(--surface-3); margin: 4px 0; }
+.gl-ms-edit .gl-actions { grid-column: 1 / -1; }
+@media (max-width: 480px) { .gl-ms-edit { grid-template-columns: 1fr; } }

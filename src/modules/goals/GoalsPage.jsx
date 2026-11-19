@@ -51,6 +51,8 @@ export default function GoalsPage() {
   const [open, setOpen] = useState('g1');
   const [draft, setDraft] = useState({ title: '', cat: 'life', deadline: `${TODAY.getFullYear()}-12-31` });
   const [ms, setMs] = useState({ title: '', due: todayIso });
+  const [edit, setEdit] = useState(null); // { id, title, cat, start, deadline }
+  const [msEdit, setMsEdit] = useState(null); // { gid, id, title, due }
 
   const goals = data.goals;
   const list = goals.filter((g) => (filter === 'all' ? true : filter === 'done' ? progress(g) === 100 : progress(g) < 100));
@@ -65,6 +67,33 @@ export default function GoalsPage() {
     upd(gid, (g) => ({ ...g, milestones: [...g.milestones, { id: uid(), title: ms.title.trim(), due: ms.due, done: false }].sort((a, b) => a.due.localeCompare(b.due)) }));
     setMs({ title: '', due: todayIso });
     notify('Đã thêm cột mốc');
+  };
+  const saveGoal = (e) => {
+    e.preventDefault();
+    if (!edit.title.trim()) return notify('Đặt tên cho mục tiêu');
+    if (edit.deadline < edit.start) return notify('Hạn hoàn thành phải sau ngày bắt đầu');
+    upd(edit.id, (g) => ({ ...g, title: edit.title.trim(), cat: edit.cat, start: edit.start, deadline: edit.deadline }));
+    setEdit(null);
+    notify('Đã lưu mục tiêu');
+  };
+  const removeGoal = (g) => {
+    if (!window.confirm(`Xóa mục tiêu "${g.title}" cùng ${g.milestones.length} cột mốc?`)) return;
+    set((s) => ({ ...s, goals: s.goals.filter((x) => x.id !== g.id) }));
+    setEdit(null); setOpen(null);
+    notify('Đã xóa mục tiêu');
+  };
+  const saveMs = (e) => {
+    e.preventDefault();
+    if (!msEdit.title.trim()) return notify('Nhập tên cột mốc');
+    upd(msEdit.gid, (g) => ({ ...g, milestones: g.milestones.map((x) => (x.id === msEdit.id ? { ...x, title: msEdit.title.trim(), due: msEdit.due } : x)).sort((a, b) => a.due.localeCompare(b.due)) }));
+    setMsEdit(null);
+    notify('Đã lưu cột mốc');
+  };
+  const removeMs = (gid, x) => {
+    if (!window.confirm(`Xóa cột mốc "${x.title}"?`)) return;
+    upd(gid, (g) => ({ ...g, milestones: g.milestones.filter((m) => m.id !== x.id) }));
+    setMsEdit(null);
+    notify('Đã xóa cột mốc');
   };
   const addGoal = (e) => {
     e.preventDefault();
@@ -110,7 +139,7 @@ export default function GoalsPage() {
       </div>
       <div className="grid g2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', alignItems: 'start' }}>
         {list.map((g) => {
-          const p = progress(g); const c = CATS[g.cat]; const isOpen = open === g.id;
+          const p = progress(g); const c = CATS[g.cat] || CATS.life; const isOpen = open === g.id;
           const left = daysFromToday(g.deadline);
           return (
             <Card key={g.id}>
@@ -126,14 +155,51 @@ export default function GoalsPage() {
               <Progress value={p} tone={c.tone === 'lav' ? 'lav' : ''} style={{ marginTop: 12 }} />
               {isOpen && (
                 <div style={{ marginTop: 12 }}>
+                  {edit?.id === g.id ? (
+                    <form className="gl-edit" onSubmit={saveGoal}>
+                      <div className="field"><label htmlFor={`ge-t-${g.id}`}>Tên mục tiêu</label><input id={`ge-t-${g.id}`} className="input" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} autoFocus /></div>
+                      <div className="field"><label htmlFor={`ge-c-${g.id}`}>Lĩnh vực</label>
+                        <select id={`ge-c-${g.id}`} className="input" value={edit.cat} onChange={(e) => setEdit({ ...edit, cat: e.target.value })}>{Object.entries(CATS).map(([k, c2]) => <option key={k} value={k}>{c2.label}</option>)}</select></div>
+                      <div className="form-row">
+                        <div className="field"><label htmlFor={`ge-s-${g.id}`}>Bắt đầu</label><input id={`ge-s-${g.id}`} type="date" className="input" value={edit.start} onChange={(e) => setEdit({ ...edit, start: e.target.value })} /></div>
+                        <div className="field"><label htmlFor={`ge-d-${g.id}`}>Hạn hoàn thành</label><input id={`ge-d-${g.id}`} type="date" className="input" value={edit.deadline} onChange={(e) => setEdit({ ...edit, deadline: e.target.value })} /></div>
+                      </div>
+                      <div className="gl-actions">
+                        <button type="button" className="btn sm ghost danger" onClick={() => removeGoal(g)}><Icon name="trash" size={15} />Xóa mục tiêu</button>
+                        <span style={{ flex: 1 }} />
+                        <button type="button" className="btn sm ghost" onClick={() => setEdit(null)}>Hủy</button>
+                        <button type="submit" className="btn sm">Lưu</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="gl-actions" style={{ marginBottom: 8 }}>
+                      <span className="faint" style={{ fontSize: 12.5 }}>{c.label} · từ {dmy(g.start)}</span>
+                      <span style={{ flex: 1 }} />
+                      <button className="btn sm ghost" onClick={() => setEdit({ id: g.id, title: g.title, cat: g.cat, start: g.start, deadline: g.deadline })}><Icon name="pen" size={15} />Sửa mục tiêu</button>
+                    </div>
+                  )}
                   <div className="list">
-                    {g.milestones.map((x) => (
+                    {g.milestones.map((x) => (msEdit?.id === x.id ? (
+                      <form className="gl-ms-edit" key={x.id} onSubmit={saveMs}>
+                        <input className="input" aria-label="Tên cột mốc" value={msEdit.title} onChange={(e) => setMsEdit({ ...msEdit, title: e.target.value })} autoFocus />
+                        <input className="input" type="date" aria-label="Hạn cột mốc" value={msEdit.due} onChange={(e) => setMsEdit({ ...msEdit, due: e.target.value })} />
+                        <div className="gl-actions">
+                          <button type="button" className="btn sm ghost danger" onClick={() => removeMs(g.id, x)}><Icon name="trash" size={15} />Xóa</button>
+                          <span style={{ flex: 1 }} />
+                          <button type="button" className="btn sm ghost" onClick={() => setMsEdit(null)}>Hủy</button>
+                          <button type="submit" className="btn sm">Lưu</button>
+                        </div>
+                      </form>
+                    ) : (
                       <div className="row" key={x.id}>
                         <Check on={x.done} onClick={() => toggleMs(g.id, x.id)} label={`Đánh dấu ${x.title}`} />
-                        <div className="row-main"><div className={`row-title ${x.done ? 'done-text' : ''}`} style={{ fontWeight: 500 }}>{x.title}</div></div>
+                        <button className="row-main gl-ms-btn" onClick={() => setMsEdit({ gid: g.id, id: x.id, title: x.title, due: x.due })} aria-label={`Sửa cột mốc ${x.title}`}>
+                          <div className={`row-title ${x.done ? 'done-text' : ''}`} style={{ fontWeight: 500 }}>{x.title}</div>
+                        </button>
                         <span className={`chip ${x.done ? '' : x.due < todayIso ? 'rose' : x.due === todayIso ? 'mint' : ''}`}>{x.done ? dm(x.due) : relDays(x.due)}</span>
+                        <button className="bare-btn gl-pen" onClick={() => setMsEdit({ gid: g.id, id: x.id, title: x.title, due: x.due })} aria-label={`Sửa cột mốc ${x.title}`}><Icon name="pen" size={15} /></button>
                       </div>
-                    ))}
+                    )))}
                     {!g.milestones.length && <div className="empty">Chưa có cột mốc. Chia mục tiêu thành các bước nhỏ ở dưới.</div>}
                   </div>
                   <div className="form-row" style={{ marginTop: 10 }}>
