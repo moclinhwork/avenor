@@ -1,12 +1,32 @@
-import { daysFromToday } from '../../core/format.js';
+import { addDays, daysFromToday, iso, parse } from '../../core/format.js';
 
+// Loại có sẵn; người dùng thêm được loại riêng (lưu ở slice.types).
 export const TYPES = {
   id: { label: 'Giấy tờ tùy thân', icon: 'passport' },
   vehicle: { label: 'Xe & lái xe', icon: 'car' },
   insurance: { label: 'Bảo hiểm', icon: 'shield' },
   sub: { label: 'Gói đăng ký', icon: 'sub' },
+  domain: { label: 'Tên miền', icon: 'code' },
+  hosting: { label: 'Hosting & máy chủ', icon: 'laptop' },
+  tv: { label: 'Truyền hình & giải trí', icon: 'play' },
   other: { label: 'Khác', icon: 'file' },
 };
+export const allTypes = (slice) => ({ ...TYPES, ...Object.fromEntries((slice?.types || []).map((t) => [t.id, { label: t.label, icon: 'tag', custom: true }])) });
+export const typeOf = (slice, id) => allTypes(slice)[id] || TYPES.other;
+
+// Chu kỳ gia hạn: số tháng (0 = một lần, không lặp).
+export const CYCLES = { '': { label: 'Không lặp', months: 0 }, 'tháng': { label: 'Hằng tháng', months: 1 }, 'quý': { label: 'Hằng quý', months: 3 }, '6 tháng': { label: '6 tháng', months: 6 }, 'năm': { label: 'Hằng năm', months: 12 }, '2 năm': { label: '2 năm', months: 24 } };
+export const monthlyCost = (d) => { const m = CYCLES[d.cycle || '']?.months; return d.cost && m ? d.cost / m : 0; };
+// Ngày hết hạn kế tiếp sau khi gia hạn một chu kỳ (giữ ngày trong tháng nếu có thể).
+export function nextExpiry(d) {
+  const m = CYCLES[d.cycle || '']?.months || 12;
+  const x = parse(d.expires);
+  const day = x.getDate();
+  const t = new Date(x.getFullYear(), x.getMonth() + m, 1);
+  t.setDate(Math.min(day, new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()));
+  return iso(t);
+}
+export const defaultExpiry = () => iso(addDays(new Date(), 90));
 
 export const initial = {
   docs: [
@@ -19,9 +39,12 @@ export const initial = {
     { id: 'd7', name: 'Netflix Premium', type: 'sub', expires: '2026-11-18', remind: 7, cost: 260_000, cycle: 'tháng' },
     { id: 'd8', name: 'Spotify Family', type: 'sub', expires: '2026-11-22', remind: 7, cost: 99_000, cycle: 'tháng' },
     { id: 'd9', name: 'iCloud+ 200GB', type: 'sub', expires: '2026-12-01', remind: 7, cost: 59_000, cycle: 'tháng' },
-    { id: 'd10', name: 'Tên miền cá nhân', type: 'other', expires: '2026-12-10', remind: 30, cost: 350_000, cycle: 'năm' },
+    { id: 'd10', name: 'Tên miền cá nhân', type: 'domain', expires: '2026-12-10', remind: 30, cost: 350_000, cycle: 'năm' },
     { id: 'd11', name: 'Đăng kiểm ô tô', type: 'vehicle', expires: '2026-11-08', remind: 30 },
+    { id: 'd12', name: 'Hosting website', type: 'hosting', provider: 'Nhà cung cấp hosting', expires: '2027-02-14', remind: 30, cost: 1_200_000, cycle: 'năm' },
+    { id: 'd13', name: 'Truyền hình K+', type: 'tv', expires: '2026-12-05', remind: 7, cost: 175_000, cycle: 'tháng' },
   ],
+  types: [],
 };
 
 export const status = (doc) => {

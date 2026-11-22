@@ -852,3 +852,8 @@ button.ac-row:hover, .ac-row-btn:hover { background: var(--surface-3); }
 .ac-keypad button:active { background: var(--surface-3); }
 .ac-keypad button.ghost { background: transparent; box-shadow: none; display: grid; place-items: center; }
 .ac-keypad button.sm { font-size: 15px; color: var(--mint); }
+/* ---------- Giấy tờ & Gia hạn ---------- */
+.doc-row { background: none; border: 0; border-top: 1px solid var(--line); width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 11px 0; }
+.doc-row .faint { flex-shrink: 0; }
+.doc-edit { display: grid; gap: 10px; padding: 12px; margin: 6px 0; border-radius: 14px; background: var(--surface-3); }
+.doc-row:first-child { border-top: 0; padding-top: 2px; }
