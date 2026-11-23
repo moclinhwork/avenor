@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useModule, useNotify } from '../../core/store.jsx';
+import { useModule, useNotify, useStore } from '../../core/store.jsx';
+import { go, useHashQuery } from '../../core/router.js';
 import { dm, dmy, num, todayIso, uid } from '../../core/format.js';
 import { Card, Delta, PageHead, StatCard, Tabs } from '../../ui/common.jsx';
 import { LineChart, Ring } from '../../ui/charts.jsx';
@@ -7,6 +8,10 @@ import Icon from '../../ui/Icon.jsx';
 import { bmi, bmiLabel, bpClass, initial } from './data.js';
 import Training from './Training.jsx';
 import Pickleball from './Pickleball.jsx';
+import Guidelines from './Guidelines.jsx';
+import { ensureGuidelines } from './guidelines.js';
+
+const TABS = [{ id: 'metrics', label: 'Chỉ số' }, { id: 'guidelines', label: 'Nguyên tắc' }, { id: 'training', label: 'Tập luyện' }, { id: 'pickleball', label: 'Pickleball' }];
 
 const toNum = (v) => parseFloat(String(v).replace(',', '.'));
 const nowTime = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
@@ -15,7 +20,12 @@ export default function HealthPage() {
   const [h, set] = useModule('health');
   const notify = useNotify();
   const [range, setRange] = useState('30');
-  const [tab, setTab] = useState(() => (['training', 'pickleball'].includes(new URLSearchParams(window.location.hash.split('?')[1] || '').get('tab')) ? new URLSearchParams(window.location.hash.split('?')[1]).get('tab') : 'metrics'));
+  const { sync } = useStore();
+  const q = useHashQuery();
+  // Tab nằm trên đường dẫn (#health?tab=…) để nút Quay lại của điện thoại đi đúng màn trước.
+  const tab = TABS.some((t) => t.id === q.get('tab')) ? q.get('tab') : 'metrics';
+  const setTab = (id) => go(id === 'metrics' ? 'health' : `health?tab=${id}`);
+  const metric = q.get('metric');
   const [form, setForm] = useState({ date: todayIso, weight: '', waist: '' });
   const [bpForm, setBpForm] = useState({ date: todayIso, time: nowTime(), sys: '', dia: '', pulse: '' });
   const [hEdit, setHEdit] = useState(null);
@@ -26,6 +36,21 @@ export default function HealthPage() {
       set((s) => ({ ...s, height: s.heightUpdated ? s.height : 173.15, heightUpdated: s.heightUpdated || todayIso, bp: s.bp || initial.bp, workouts: s.workouts || initial.workouts }));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Nguyên tắc: tạo nhóm mặc định + dữ liệu mẫu đúng một lần, sau khi dữ liệu tài khoản đã tải xong (không ghi đè dữ liệu có sẵn).
+  const ready = sync !== 'connecting';
+  useEffect(() => { if (ready && !h.guidelines) set((s) => ensureGuidelines(s)); }, [ready, !!h.guidelines]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Mở từ liên kết chỉ số (#health?metric=waist): cuộn tới thẻ lịch sử tương ứng và đánh dấu.
+  useEffect(() => {
+    if (tab !== 'metrics' || !metric) return undefined;
+    const t = setTimeout(() => {
+      const el = document.getElementById(`metric-${metric}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('hg-flash');
+      setTimeout(() => el.classList.remove('hg-flash'), 1800);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [tab, metric]);
 
   const sorted = [...h.entries].sort((a, b) => a.date.localeCompare(b.date));
   const last = sorted[sorted.length - 1];
@@ -73,9 +98,9 @@ export default function HealthPage() {
   return (
     <div className="fade-in">
       <PageHead title="Sức khỏe" subtitle="Theo dõi các chỉ số chính, huyết áp và quãng đường tập luyện." />
-      <Tabs tabs={[{ id: 'metrics', label: 'Chỉ số' }, { id: 'training', label: 'Tập luyện' }, { id: 'pickleball', label: 'Pickleball' }]} value={tab} onChange={setTab} />
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
-      {tab === 'pickleball' ? <Pickleball h={h} set={set} notify={notify} /> : tab === 'training' ? <Training h={h} set={set} notify={notify} /> : <>
+      {tab === 'guidelines' ? <Guidelines h={h} set={set} notify={notify} ready={ready} q={q} /> : tab === 'pickleball' ? <Pickleball h={h} set={set} notify={notify} /> : tab === 'training' ? <Training h={h} set={set} notify={notify} /> : <>
 
       <div className="grid g4">
         <StatCard icon="scale" label="Cân nặng" value={num(last.weight)} unit="kg" foot={<Delta value={+(last.weight - first.weight).toFixed(1)} unit=" kg" />} />
@@ -85,7 +110,7 @@ export default function HealthPage() {
       </div>
 
       <div className="grid g-main" style={{ marginTop: 14 }}>
-        <Card title="Lịch sử cân nặng" icon="trend" glow
+        <Card id="metric-weight" title="Lịch sử cân nặng" icon="trend" glow
           action={<div className="tabs seg" style={{ margin: 0, padding: 3 }}>{[['30', '30 ngày'], ['90', '90 ngày'], ['all', 'Tất cả']].map(([k, l]) => (
             <button key={k} className={`tab ${range === k ? 'active' : ''}`} style={{ padding: '5px 10px' }} onClick={() => setRange(k)}>{l}</button>))}</div>}>
           <LineChart data={shown.map((e) => ({ label: dm(e.date), value: e.weight }))} goal={h.goalWeight} format={(v) => `${num(v)} kg`} yFormat={(v) => num(v)} />
@@ -94,7 +119,7 @@ export default function HealthPage() {
             <span className="muted" style={{ fontSize: 12.5 }}>so với {dmy(first.date)}</span>
           </div>
         </Card>
-        <Card title="Tiến tới mục tiêu" icon="target">
+        <Card id="metric-vitals" title="Tiến tới mục tiêu" icon="target">
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <Ring value={goalPct} size={116} thickness={11}>
               <div><div className="num" style={{ fontSize: 26, fontWeight: 600 }}>{goalPct}%</div><div className="muted" style={{ fontSize: 11 }}>hoàn thành</div></div>
@@ -117,7 +142,7 @@ export default function HealthPage() {
       </div>
 
       <div className="grid g-main" style={{ marginTop: 14 }}>
-        <Card title="Xu hướng vòng eo" icon="waist">
+        <Card id="metric-waist" title="Xu hướng vòng eo" icon="waist">
           <LineChart data={shown.map((e) => ({ label: dm(e.date), value: e.waist }))} goal={h.goalWaist} color="var(--lav)" format={(v) => `${num(v)} cm`} yFormat={(v) => num(v)} height={170} />
         </Card>
         <Card title="Ghi chỉ số mới" icon="plus">
@@ -133,7 +158,7 @@ export default function HealthPage() {
       </div>
 
       <div className="grid g-main" style={{ marginTop: 14 }}>
-        <Card title="Huyết áp" icon="drop"
+        <Card id="metric-bp" title="Huyết áp" icon="drop"
           action={bpLast && <span className={`chip ${bpCls.tone}`}>{bpLast.sys}/{bpLast.dia} · {bpCls.label}</span>}>
           {bpShown.length >= 2 ? (
             <>

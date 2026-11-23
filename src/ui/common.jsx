@@ -14,9 +14,9 @@ export function PageHead({ title, subtitle, children }) {
   );
 }
 
-export function Card({ title, icon, action, children, className = '', style, glow }) {
+export function Card({ title, icon, action, children, className = '', style, glow, id }) {
   return (
-    <section className={`card ${glow ? 'glow' : ''} ${className}`} style={style}>
+    <section id={id} className={`card ${glow ? 'glow' : ''} ${className}`} style={style}>
       {(title || action) && (
         <div className="card-head">
           {title && <h3 className="card-title">{icon && <Icon name={icon} size={18} />}{title}</h3>}

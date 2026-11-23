@@ -89,6 +89,11 @@ const P = {
   more: <><circle cx="5" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="19" cy="12" r="1.3" fill="currentColor" /></>,
   arrowUR: <path d="M7 17 17 7M9 7h8v8" />,
   arrowDR: <path d="M7 7l10 10M17 9v8H9" />,
+  leaf: <><path d="M5 19c0-8 5-13.5 14-14 .2 9-5 14-13.2 14Z" /><path d="M5 19c2.5-3.5 5-6 8.5-8.5" /></>,
+  minusCircle: <><circle cx="12" cy="12" r="8.5" /><path d="M8 12h8" /></>,
+  ban: <><circle cx="12" cy="12" r="8.5" /><path d="m6 6 12 12" /></>,
+  fork: <><path d="M5 3v5a2.5 2.5 0 0 0 5 0V3M7.5 3v18" /><path d="M17.5 21V3c-2 0-3.5 2.4-3.5 5.5S15.5 13 17.5 13" /></>,
+  cup: <><path d="M4.5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5Z" /><path d="M15.5 10.5h1.5a2.5 2.5 0 0 1 0 5h-1.5M8 3.5v2.5M11 3v3M14 3.5v2.5" /></>,
   checkCircle: <><circle cx="12" cy="12" r="8.5" /><path d="m8.5 12.2 2.4 2.3 4.6-4.8" /></>,
 };
 

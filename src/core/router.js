@@ -12,3 +12,15 @@ export function useRoute(fallback) {
   return route;
 }
 export const go = (id) => { window.location.hash = id; };
+
+// Tham số sau dấu "?" của hash (#health?tab=guidelines&v=detail…), cập nhật khi hash đổi.
+export const hashQuery = () => new URLSearchParams((window.location.hash || '').split('?')[1] || '');
+export function useHashQuery() {
+  const [q, setQ] = useState(hashQuery);
+  useEffect(() => {
+    const on = () => setQ(hashQuery());
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  return q;
+}
