@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { makeQueue, transcribeFile } from './transcribe.mjs';
 import { aiEnabled, AI_MODEL, briefing, command } from './ai.mjs';
+import { setupNotify } from './notify.mjs';
 
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
@@ -92,6 +93,8 @@ async function readJson(req, limit = 4 << 20) {
   try { return JSON.parse((await readBody(req, limit)).toString('utf8') || '{}'); } catch (e) { if (e.status) throw e; throw Object.assign(new Error('bad_json'), { status: 400 }); }
 }
 
+const notify = setupNotify({ db, dataDir: DATA_DIR, publicUrl: PUBLIC_URL, send, fail, readBody, readJson });
+
 // Giới hạn số lần đăng nhập sai theo IP.
 const attempts = new Map();
 function limited(ip) {
@@ -134,6 +137,8 @@ async function stravaToken(userId) {
 async function api(req, res, url) {
   const p = url.pathname;
   const m = req.method;
+  // Webhook máy chủ gọi máy chủ: xác thực bằng chữ ký HMAC, không dùng cookie nên không cần header chống CSRF.
+  if (p === '/api/hooks/trucchi' && m === 'POST') return notify.trucchiHook(req, res);
   // Chống CSRF: mọi yêu cầu ghi phải có header riêng (trình duyệt không tự gửi từ trang khác).
   if (m !== 'GET' && m !== 'HEAD' && req.headers['x-avenor'] !== '1') return fail(res, 403, 'csrf');
 
@@ -217,6 +222,9 @@ async function api(req, res, url) {
     db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
     return send(res, 200, { ok: true }, { 'Set-Cookie': startSession(res, user.id) });
   }
+
+  // Thông báo (đơn tranh mới...) và Web Push
+  if (p.startsWith('/api/notifications') || p.startsWith('/api/push/')) return notify.userApi(req, res, url, user);
 
   // Dữ liệu: mỗi module một tài liệu JSON.
   if (p === '/api/data' && m === 'GET') {

@@ -68,4 +68,10 @@ Cấu hình ở `/opt/avenor/.env` (xem `.env.example`), sửa xong chạy `dock
 
 Sao lưu: thư mục `/opt/avenor/data`.
 
+### Thông báo đơn tranh mới (trucchi.moclinh.vn)
+- Trang tranh gửi mỗi đơn mới tới `POST /api/hooks/trucchi` (đi nội bộ `http://127.0.0.1:8120`), ký bằng HMAC-SHA256 của `"<X-Trucchi-Timestamp>.<nội dung>"` trong header `X-Trucchi-Signature`, lệch giờ tối đa 5 phút. Cùng một mã đơn chỉ lưu một lần.
+- Đặt `TRUCCHI_WEBHOOK_SECRET` (và `TRUCCHI_NOTIFY_USERS` nếu muốn) trong `.env`, rồi `docker compose up -d`.
+- Trong app: nút túi trên thanh trên cùng hiện số đơn chưa đọc và danh sách đơn. Bấm "Bật thông báo" để thiết bị nhận Web Push (thông báo trên thanh trạng thái kể cả khi đã tắt app). Khóa VAPID tự tạo ở `data/vapid.json`.
+- Web Push chạy trên Chrome/Edge/Firefox (Android, máy tính) và Safari khi đã "Thêm vào Màn hình chính". App Android (WebView) chưa nhận Web Push.
+
 Chạy thử bản VPS trên máy: `VITE_SERVER=1 npx vite build && STATIC_DIR=dist DATA_DIR=./data node server/index.mjs`.
