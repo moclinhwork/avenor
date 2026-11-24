@@ -10,6 +10,9 @@ import CaptureIdea from './modules/ideas/CaptureIdea.jsx';
 import { openCapture, useIdeasBackground } from './modules/ideas/background.js';
 import CommandSheet, { openCommand } from './modules/life/CommandSheet.jsx';
 import { useAccount } from './core/AuthGate.jsx';
+import { SERVER } from './core/platform.js';
+import { refreshPush, useNotifications } from './core/notifications.js';
+import NotificationsSheet from './ui/NotificationsSheet.jsx';
 
 // Điện thoại: màn chính là Hôm nay; các module khác mở từ mục "Module".
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 979px)').matches;
@@ -27,6 +30,28 @@ export default function App() {
   const [command, setCommand] = useState(false);
   const ai = !!useAccount()?.ai;
   useIdeasBackground();
+  const notes = useNotifications();
+  const notify = useStore().notify;
+  const [notesOpen, setNotesOpen] = useState(false);
+  useEffect(() => {
+    if (!SERVER) return undefined;
+    refreshPush();
+    // Bấm vào thông báo đẩy mở /#notifications: hiện danh sách rồi trả hash về như cũ.
+    const check = () => { if (location.hash === '#notifications') { history.replaceState(null, '', location.pathname); setNotesOpen(true); notes.reload(); } };
+    check();
+    window.addEventListener('hashchange', check);
+    return () => window.removeEventListener('hashchange', check);
+  }, []);
+  useEffect(() => {
+    if (!notes.fresh) return;
+    notify(notes.fresh.title);
+    notes.clearFresh();
+  }, [notes.fresh]);
+  const notesBtn = SERVER && (
+    <button className="icon-btn" style={{ marginRight: 8 }} onClick={() => { setSheet(false); setNotesOpen(true); }} aria-label={notes.unread ? `${notes.unread} thông báo chưa đọc` : 'Thông báo'} title="Thông báo">
+      <Icon name="bag" size={21} />{notes.unread > 0 && <span className="count">{notes.unread > 9 ? '9+' : notes.unread}</span>}
+    </button>
+  );
   useEffect(() => {
     const on = () => { setSheet(false); setCapture(true); };
     const onCmd = () => { setSheet(false); setCommand(true); };
@@ -66,6 +91,7 @@ export default function App() {
               </div>
             )}
             <div className="muted" style={{ fontSize: 13, display: 'flex', gap: 10, alignItems: 'center' }}><span className="desktop-date">{longDate(TODAY)}</span><span className={`chip ${syncTone} desktop-date`}>{syncLabel}</span></div>
+            {notesBtn}
             {ai && <button className="icon-btn" style={{ marginRight: 8 }} onClick={openCommand} aria-label="Ra lệnh cho Avenor" title="Ra lệnh cho Avenor"><Icon name="sparkle" size={21} /></button>}
             {mod.id === 'today' ? (
               <button className="icon-btn" onClick={() => go('today')} aria-label={`${pending} việc chưa xong hôm nay`}>
@@ -100,6 +126,7 @@ export default function App() {
 
       {capture && <CaptureIdea onClose={() => setCapture(false)} />}
       {command && <CommandSheet onClose={() => setCommand(false)} />}
+      {notesOpen && <NotificationsSheet data={notes} onClose={() => setNotesOpen(false)} />}
 
       {sheet && (
         <>
