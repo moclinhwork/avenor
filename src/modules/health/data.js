@@ -40,6 +40,19 @@ export const initial = {
   vitals: { restingHr: 62, sleepAvg: 7.1, steps: 8420, water: 1.9 },
 };
 
+// Tiến độ tới cân nặng mục tiêu: đi được bao nhiêu % quãng đường từ mốc bắt đầu tới mục tiêu.
+// Mốc bắt đầu = h.goalStart nếu bạn đặt, không thì lần đo đầu tiên. Dùng được cho cả giảm và tăng cân.
+export function goalProgress(h, sorted) {
+  const last = sorted[sorted.length - 1];
+  const start = Number(h.goalStart) || sorted[0]?.weight;
+  const goal = Number(h.goalWeight);
+  if (!last || !start || !goal) return { pct: 0, left: 0, start, last, goal };
+  const total = start - goal;
+  const pct = total === 0 ? (last.weight === goal ? 100 : 0) : Math.max(0, Math.min(100, Math.round(((start - last.weight) / total) * 100)));
+  const reached = total >= 0 ? last.weight <= goal : last.weight >= goal;
+  return { pct: reached ? 100 : pct, left: reached ? 0 : Math.abs(last.weight - goal), start, last, goal, gain: total < 0 };
+}
+
 export const bmi = (w, hCm) => w / (hCm / 100) ** 2;
 export const bmiLabel = (b) => (b < 18.5 ? 'Thiếu cân' : b < 23 ? 'Bình thường' : b < 25 ? 'Thừa cân' : 'Béo phì');
 

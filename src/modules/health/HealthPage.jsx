@@ -5,7 +5,7 @@ import { dm, dmy, num, todayIso, uid } from '../../core/format.js';
 import { Card, Delta, PageHead, StatCard, Tabs } from '../../ui/common.jsx';
 import { LineChart, Ring } from '../../ui/charts.jsx';
 import Icon from '../../ui/Icon.jsx';
-import { bmi, bmiLabel, bpClass, initial } from './data.js';
+import { bmi, bmiLabel, bpClass, goalProgress, initial } from './data.js';
 import Training from './Training.jsx';
 import Pickleball from './Pickleball.jsx';
 import Guidelines from './Guidelines.jsx';
@@ -29,6 +29,7 @@ export default function HealthPage() {
   const [form, setForm] = useState({ date: todayIso, weight: '', waist: '' });
   const [bpForm, setBpForm] = useState({ date: todayIso, time: nowTime(), sys: '', dia: '', pulse: '' });
   const [hEdit, setHEdit] = useState(null);
+  const [gEdit, setGEdit] = useState(null); // form sửa mục tiêu và chỉ số sinh hiệu
 
   // Một lần: chiều cao chuyển sang hồ sơ cơ thể (173,15 cm), thêm huyết áp và tập luyện.
   useEffect(() => {
@@ -58,8 +59,36 @@ export default function HealthPage() {
   const first = shown[0];
   const b = bmi(last.weight, h.height);
   const start = sorted[0];
-  const toGoal = Math.max(0, last.weight - h.goalWeight);
-  const goalPct = Math.round(((start.weight - last.weight) / (start.weight - h.goalWeight)) * 100);
+  const gp = goalProgress(h, sorted);
+  const toGoal = gp.left;
+  const goalPct = gp.pct;
+  const vit = h.vitals || {};
+  const openGoal = () => setGEdit({
+    goalWeight: num(h.goalWeight), goalWaist: h.goalWaist ? num(h.goalWaist) : '', goalStart: h.goalStart ? num(h.goalStart) : '',
+    restingHr: vit.restingHr ?? '', sleepAvg: vit.sleepAvg != null ? num(vit.sleepAvg) : '', steps: vit.steps ?? '', water: vit.water != null ? num(vit.water) : '',
+  });
+  const saveGoal = (e) => {
+    e.preventDefault();
+    const gw = toNum(gEdit.goalWeight), gwa = toNum(gEdit.goalWaist), gs = toNum(gEdit.goalStart);
+    if (!(gw >= 30 && gw <= 250)) return notify('Nhập cân nặng mục tiêu từ 30 đến 250 kg');
+    if (String(gEdit.goalWaist).trim() && !(gwa >= 40 && gwa <= 200)) return notify('Nhập vòng eo mục tiêu từ 40 đến 200 cm');
+    if (String(gEdit.goalStart).trim() && !(gs >= 30 && gs <= 250)) return notify('Nhập cân nặng bắt đầu từ 30 đến 250 kg');
+    const opt = (v, lo, hi, label) => {
+      if (!String(v).trim()) return { v: null };
+      const n = toNum(v);
+      return n >= lo && n <= hi ? { v: n } : { err: `${label} phải từ ${lo} đến ${hi}` };
+    };
+    const hr = opt(gEdit.restingHr, 30, 200, 'Nhịp tim nghỉ'), sl = opt(gEdit.sleepAvg, 0, 24, 'Giấc ngủ'), st = opt(gEdit.steps, 0, 100000, 'Bước chân'), wa = opt(gEdit.water, 0, 10, 'Nước uống');
+    const bad = [hr, sl, st, wa].find((x) => x.err);
+    if (bad) return notify(bad.err);
+    set((s) => ({
+      ...s, goalWeight: Math.round(gw * 10) / 10, goalWaist: String(gEdit.goalWaist).trim() ? Math.round(gwa * 10) / 10 : s.goalWaist,
+      goalStart: String(gEdit.goalStart).trim() ? Math.round(gs * 10) / 10 : null, goalUpdated: todayIso,
+      vitals: { ...(s.vitals || {}), restingHr: hr.v != null ? Math.round(hr.v) : null, sleepAvg: sl.v, steps: st.v != null ? Math.round(st.v) : null, water: wa.v },
+    }));
+    setGEdit(null);
+    notify('Đã cập nhật mục tiêu');
+  };
 
   const add = (e) => {
     e.preventDefault();
@@ -119,25 +148,50 @@ export default function HealthPage() {
             <span className="muted" style={{ fontSize: 12.5 }}>so với {dmy(first.date)}</span>
           </div>
         </Card>
-        <Card id="metric-vitals" title="Tiến tới mục tiêu" icon="target">
+        <Card id="metric-vitals" title="Tiến tới mục tiêu" icon="target"
+          action={gEdit === null && <button className="btn sm ghost" onClick={openGoal}><Icon name="pen" size={14} />Sửa</button>}>
+          {gEdit !== null ? (
+            <form onSubmit={saveGoal} style={{ display: 'grid', gap: 12 }}>
+              <div className="form-row">
+                <div className="field"><label htmlFor="g-w">Cân nặng mục tiêu (kg)</label><input id="g-w" className="input" inputMode="decimal" autoFocus value={gEdit.goalWeight} onChange={(e) => setGEdit({ ...gEdit, goalWeight: e.target.value })} /></div>
+                <div className="field"><label htmlFor="g-waist">Vòng eo mục tiêu (cm)</label><input id="g-waist" className="input" inputMode="decimal" value={gEdit.goalWaist} onChange={(e) => setGEdit({ ...gEdit, goalWaist: e.target.value })} /></div>
+              </div>
+              <div className="field"><label htmlFor="g-start">Cân nặng lúc bắt đầu (kg)</label><input id="g-start" className="input" inputMode="decimal" placeholder={`Để trống: lấy lần đo đầu tiên (${num(start.weight)} kg)`} value={gEdit.goalStart} onChange={(e) => setGEdit({ ...gEdit, goalStart: e.target.value })} />
+                <span className="faint" style={{ fontSize: 12 }}>Dùng để tính % hoàn thành. Khi đặt mục tiêu mới, bạn có thể nhập cân nặng hiện tại ({num(last.weight)} kg) làm mốc.</span></div>
+              <div className="muted" style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>Chỉ số khác (để trống nếu chưa có)</div>
+              <div className="form-row">
+                <div className="field"><label htmlFor="g-hr">Nhịp tim nghỉ (bpm)</label><input id="g-hr" className="input" inputMode="numeric" value={gEdit.restingHr} onChange={(e) => setGEdit({ ...gEdit, restingHr: e.target.value })} /></div>
+                <div className="field"><label htmlFor="g-sleep">Giấc ngủ TB (giờ)</label><input id="g-sleep" className="input" inputMode="decimal" value={gEdit.sleepAvg} onChange={(e) => setGEdit({ ...gEdit, sleepAvg: e.target.value })} /></div>
+              </div>
+              <div className="form-row">
+                <div className="field"><label htmlFor="g-steps">Bước chân mỗi ngày</label><input id="g-steps" className="input" inputMode="numeric" value={gEdit.steps} onChange={(e) => setGEdit({ ...gEdit, steps: e.target.value })} /></div>
+                <div className="field"><label htmlFor="g-water">Nước uống (lít/ngày)</label><input id="g-water" className="input" inputMode="decimal" value={gEdit.water} onChange={(e) => setGEdit({ ...gEdit, water: e.target.value })} /></div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn" type="submit"><Icon name="check" size={16} />Lưu</button>
+                <button className="btn ghost" type="button" onClick={() => setGEdit(null)}>Hủy</button>
+              </div>
+            </form>
+          ) : <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <Ring value={goalPct} size={116} thickness={11}>
               <div><div className="num" style={{ fontSize: 26, fontWeight: 600 }}>{goalPct}%</div><div className="muted" style={{ fontSize: 11 }}>hoàn thành</div></div>
             </Ring>
             <div style={{ display: 'grid', gap: 6 }}>
               <div><span className="muted">Mục tiêu </span><b className="num">{num(h.goalWeight)} kg</b></div>
-              <div><span className="muted">Còn lại </span><b className="num mint">{num(toGoal)} kg</b></div>
-              <div><span className="muted">Bắt đầu </span><b className="num">{num(start.weight)} kg</b></div>
+              <div><span className="muted">{gp.gain ? 'Cần tăng ' : 'Còn lại '}</span><b className="num mint">{num(toGoal)} kg</b></div>
+              <div><span className="muted">Bắt đầu </span><b className="num">{num(gp.start)} kg</b></div>
             </div>
           </div>
           <div className="grid g2" style={{ marginTop: 16 }}>
-            {[['heart', 'Nhịp tim nghỉ', `${h.vitals.restingHr}`, 'bpm'], ['moon', 'Giấc ngủ TB', num(h.vitals.sleepAvg), 'giờ'], ['bolt', 'Bước chân', h.vitals.steps.toLocaleString('vi-VN'), 'bước'], ['drop', 'Nước uống', num(h.vitals.water), 'lít']].map(([ic, l, v, u]) => (
+            {[['heart', 'Nhịp tim nghỉ', vit.restingHr ? `${vit.restingHr}` : '—', 'bpm'], ['moon', 'Giấc ngủ TB', vit.sleepAvg != null ? num(vit.sleepAvg) : '—', 'giờ'], ['bolt', 'Bước chân', vit.steps != null ? vit.steps.toLocaleString('vi-VN') : '—', 'bước'], ['drop', 'Nước uống', vit.water != null ? num(vit.water) : '—', 'lít']].map(([ic, l, v, u]) => (
               <div key={l} style={{ padding: 12, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--line)' }}>
                 <div className="muted" style={{ fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' }}><Icon name={ic} size={14} />{l}</div>
-                <div className="num" style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>{v} <small className="muted" style={{ fontSize: 11 }}>{u}</small></div>
+                <div className="num" style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>{v} {v !== "—" && <small className="muted" style={{ fontSize: 11 }}>{u}</small>}</div>
               </div>
             ))}
           </div>
+          </>}
         </Card>
       </div>
 

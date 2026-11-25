@@ -9,6 +9,7 @@ import { byCategory, fundSaved, monthlySeries, monthTx, totals } from '../financ
 import { onTrack as isOnTrack, progress } from '../goals/data.js';
 import { finishedIn } from '../books/data.js';
 import { status as docStatus } from '../documents/data.js';
+import { goalProgress } from '../health/data.js';
 import { weekCount } from '../habits/HabitsPage.jsx';
 import { effectiveAll } from '../habits/link.js';
 import { AgendaList } from '../today/TodayPage.jsx';
@@ -25,7 +26,7 @@ export default function OverviewPage() {
   const hs = [...health.entries].sort((a, b) => a.date.localeCompare(b.date));
   const w = hs[hs.length - 1];
   const w30 = hs[Math.max(0, hs.length - 11)];
-  const healthPct = Math.round(((hs[0].weight - w.weight) / (hs[0].weight - health.goalWeight)) * 100);
+  const healthPct = goalProgress(health, hs).pct;
   // Tài chính
   const tx = monthTx(finance);
   const tot = totals(tx);
