@@ -16,7 +16,7 @@ const WHAT = {
 };
 const SETUP = {
   sales: 'Mount the Sales data folder into Avenor (SALES_DATA_DIR in /opt/avenor/.env, default /opt/sothuchi/data) and run deploy/install.sh.',
-  google_ads: 'Create a Google OAuth client and a Google Ads developer token, then run: bash deploy/set-business.sh google',
+  google_ads: 'Create a Google OAuth client (no developer token needed), then run: bash deploy/set-business.sh google',
   meta_ads: 'Create a Meta app with Facebook Login (ads_read) or a System User token, then run: bash deploy/set-business.sh meta',
   ga4: 'Create a Google OAuth client with the Analytics Data API enabled, then run: bash deploy/set-business.sh google',
   youtube: 'Create a Google OAuth client with YouTube Data API v3 and YouTube Analytics API enabled, then run: bash deploy/set-business.sh google',

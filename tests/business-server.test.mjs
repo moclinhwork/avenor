@@ -77,7 +77,8 @@ test('Business API checks the Avenor user', async () => {
   assert.equal(r.status, 200); assert.equal(r.body.connections.length, 0);
   assert.equal(r.body.providers.sales.configured, true);
   assert.equal(r.body.providers.google_ads.configured, false);
-  assert.ok(r.body.providers.google_ads.missing.includes('GOOGLE_ADS_DEVELOPER_TOKEN'));
+  assert.ok(r.body.providers.google_ads.missing.includes('BIZ_GOOGLE_CLIENT_ID'));
+  assert.ok(!r.body.providers.google_ads.missing.includes('GOOGLE_ADS_DEVELOPER_TOKEN'));
 });
 
 test('Sales connection: connect, read range, zero days', async () => {

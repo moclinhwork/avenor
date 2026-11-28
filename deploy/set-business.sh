@@ -27,7 +27,7 @@ if [ "$ONLY" = all ] || [ "$ONLY" = google ]; then
   echo "== Google (Ads, GA4, YouTube). Redirect URI: https://$DOMAIN/api/business/oauth/google/callback"
   ask BIZ_GOOGLE_CLIENT_ID "Google OAuth Client ID"
   ask BIZ_GOOGLE_CLIENT_SECRET "Google OAuth Client secret" an
-  ask GOOGLE_ADS_DEVELOPER_TOKEN "Google Ads developer token (Enter neu chua co)" an
+  ask GOOGLE_ADS_DEVELOPER_TOKEN "Google Ads developer token (khong can nua, Enter de bo qua)" an
   ask GOOGLE_ADS_LOGIN_CUSTOMER_ID "Google Ads MCC id (Enter neu khong dung MCC)"
 fi
 if [ "$ONLY" = all ] || [ "$ONLY" = meta ]; then

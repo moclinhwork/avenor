@@ -19,6 +19,7 @@ export async function http(url, { method = 'GET', headers = {}, body, form, time
   if (r.status === 401 || j?.error === 'invalid_grant' || j?.error?.code === 190 || j?.error?.status === 'UNAUTHENTICATED') throw new AuthError();
   if (!r.ok || (j?.error && j.error.code !== 'ok' && typeof j.error === 'object' && j.error.message)) {
     const msg = j?.error?.message || j?.error_description || j?.error?.code || `http_${r.status}`;
+    if (/CLOUD_PROJECT_NOT_APPROVED|DEVELOPER_TOKEN_NOT_APPROVED/.test(text)) throw new SourceError('Google Cloud project needs Google Ads API Explorer access (Cloud Console > Google Ads API > Overview > Request access)', r.status);
     if (r.status === 403 && /permission|scope|insufficient/i.test(String(msg))) throw new AuthError('missing_permission');
     throw new SourceError(String(msg).slice(0, 240), r.status);
   }
@@ -33,6 +34,7 @@ const n = (v) => (v == null || v === '' ? 0 : Number(v));
 export const GOOGLE_ID = env('BIZ_GOOGLE_CLIENT_ID', env('GOOGLE_CLIENT_ID'));
 export const GOOGLE_SECRET = env('BIZ_GOOGLE_CLIENT_SECRET', env('GOOGLE_CLIENT_SECRET'));
 const ADS_VER = env('GOOGLE_ADS_API_VERSION', 'v26');
+// Từ 9/2026 Google bỏ developer token (quyền truy cập theo Cloud project); chỉ gửi header nếu còn đặt.
 const ADS_DEV = env('GOOGLE_ADS_DEVELOPER_TOKEN');
 const ADS_LOGIN = env('GOOGLE_ADS_LOGIN_CUSTOMER_ID').replace(/\D/g, '');
 export const GOOGLE_SCOPES = {
@@ -44,7 +46,7 @@ export async function googleRefresh(tok) {
   const j = await http('https://oauth2.googleapis.com/token', { method: 'POST', form: { client_id: GOOGLE_ID, client_secret: GOOGLE_SECRET, refresh_token: tok.refresh, grant_type: 'refresh_token' } });
   return { ...tok, access: j.access_token, expires: Date.now() + (j.expires_in - 60) * 1000 };
 }
-const adsHeaders = (access, loginId) => ({ Authorization: `Bearer ${access}`, 'developer-token': ADS_DEV, ...(loginId ? { 'login-customer-id': loginId } : {}) });
+const adsHeaders = (access, loginId) => ({ Authorization: `Bearer ${access}`, ...(ADS_DEV ? { 'developer-token': ADS_DEV } : {}), ...(loginId ? { 'login-customer-id': loginId } : {}) });
 async function gaql(access, customer, query, loginId) {
   const out = [];
   let pageToken;
@@ -82,7 +84,7 @@ const TT_VIDEO_FIELDS = 'id,title,video_description,cover_image_url,create_time,
 export const SOURCES = {
   google_ads: {
     label: 'Google Ads', provider: 'google', group: 'marketing', syncEveryH: 3, lookback: 4, initial: 62,
-    missing: () => [!GOOGLE_ID && 'BIZ_GOOGLE_CLIENT_ID', !GOOGLE_SECRET && 'BIZ_GOOGLE_CLIENT_SECRET', !ADS_DEV && 'GOOGLE_ADS_DEVELOPER_TOKEN'].filter(Boolean),
+    missing: () => [!GOOGLE_ID && 'BIZ_GOOGLE_CLIENT_ID', !GOOGLE_SECRET && 'BIZ_GOOGLE_CLIENT_SECRET'].filter(Boolean),
     async listAccounts(access) {
       const j = await http(`https://googleads.googleapis.com/${ADS_VER}/customers:listAccessibleCustomers`, { headers: adsHeaders(access) });
       const ids = (j?.resourceNames || []).map((r) => r.split('/')[1]).slice(0, 30);
