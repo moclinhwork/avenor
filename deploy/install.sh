@@ -26,6 +26,8 @@ cd "$DIR"
 grep -q '^APP_PORT=' .env || echo 'APP_PORT=8120' >> .env
 mkdir -p data && chown 1000:1000 data
 set -a; . ./.env; set +a
+# Nhóm sở hữu thư mục Sales/Kế toán, để container đọc được ketoan.db (chỉ đọc).
+export SALES_GID="${SALES_GID:-$(stat -c %g "${SALES_DATA_DIR:-/opt/sothuchi/data}" 2>/dev/null || echo 1000)}"
 
 if systemctl is-active --quiet caddy; then
   echo "==> Dùng Caddy có sẵn trên VPS, app ở 127.0.0.1:$APP_PORT"

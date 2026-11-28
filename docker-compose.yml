@@ -5,6 +5,9 @@ services:
     env_file: .env
     environment:
       PUBLIC_URL: https://${DOMAIN}
+    # Cho app đọc dữ liệu Sales: thêm nhóm sở hữu thư mục Sales (install.sh tự lấy).
+    group_add:
+      - "${SALES_GID:-1000}"
     volumes:
       - ./data:/data
       - ${SALES_DATA_DIR:-/opt/sothuchi/data}:/sales:ro
