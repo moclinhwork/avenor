@@ -8,5 +8,7 @@ services:
       PUBLIC_URL: https://${DOMAIN}
     volumes:
       - ../data:/data
+      # Business → Sales: thư mục dữ liệu Sales / Kế toán (bảng đơn tt_don), chỉ đọc.
+      - ${SALES_DATA_DIR:-/opt/sothuchi/data}:/sales:ro
     ports:
       - "127.0.0.1:${APP_PORT:-8120}:3000"

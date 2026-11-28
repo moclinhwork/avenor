@@ -10,13 +10,14 @@ import books from './books/index.js';
 import habits from './habits/index.js';
 import documents from './documents/index.js';
 import accounts from './accounts/index.js';
+import business from './business/index.js';
 import journal from './journal/index.js';
 import learning from './learning/index.js';
 import ideas from './ideas/index.js';
 import life from './life/index.js';
 import settings from './settings/index.js';
 
-export const MODULES = [overview, today, life, health, ideas, goals, finance, travel, books, habits, documents, accounts, journal, learning, settings];
+export const MODULES = [overview, today, life, business, health, ideas, goals, finance, travel, books, habits, documents, accounts, journal, learning, settings];
 export const byId = Object.fromEntries(MODULES.map((m) => [m.id, m]));
 export const GROUPS = [
   { id: 'main', label: 'Tổng hợp' },
