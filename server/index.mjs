@@ -8,6 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { makeQueue, transcribeFile } from './transcribe.mjs';
 import { aiEnabled, AI_MODEL, briefing, command } from './ai.mjs';
 import { setupNotify } from './notify.mjs';
+import { setupBusiness } from './business/index.mjs';
 
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
@@ -94,6 +95,7 @@ async function readJson(req, limit = 4 << 20) {
 }
 
 const notify = setupNotify({ db, dataDir: DATA_DIR, publicUrl: PUBLIC_URL, send, fail, readBody, readJson });
+const business = setupBusiness({ db, dataDir: DATA_DIR, publicUrl: PUBLIC_URL, send, fail, readJson, cookie, cookies });
 
 // Giới hạn số lần đăng nhập sai theo IP.
 const attempts = new Map();
@@ -147,7 +149,7 @@ async function api(req, res, url) {
   if (p === '/api/me' && m === 'GET') {
     const u = sessionUser(req);
     const users = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
-    return send(res, 200, { user: u, canSignup: PASSWORD_LOGIN && (ALLOW_SIGNUP || users === 0), password: PASSWORD_LOGIN, google: GOOGLE, strava: !!(STRAVA_ID && STRAVA_SECRET), ai: aiEnabled() ? { model: AI_MODEL } : null });
+    return send(res, 200, { user: u, canSignup: PASSWORD_LOGIN && (ALLOW_SIGNUP || users === 0), password: PASSWORD_LOGIN, google: GOOGLE, strava: !!(STRAVA_ID && STRAVA_SECRET), ai: aiEnabled() ? { model: AI_MODEL } : null, business: u ? business.allowed(u) : false });
   }
   if (p === '/api/auth/google' && m === 'GET') {
     if (!GOOGLE) return fail(res, 503, 'google_not_configured');
@@ -222,6 +224,9 @@ async function api(req, res, url) {
     db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
     return send(res, 200, { ok: true }, { 'Set-Cookie': startSession(res, user.id) });
   }
+
+  // Business: doanh số, quảng cáo, website, kênh nội dung (kiểm tra quyền trong business/index.mjs)
+  if (p.startsWith('/api/business/')) return business.userApi(req, res, url, user);
 
   // Thông báo (đơn tranh mới...) và Web Push
   if (p.startsWith('/api/notifications') || p.startsWith('/api/push/')) return notify.userApi(req, res, url, user);
@@ -378,7 +383,7 @@ const SEC_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'same-origin',
   'X-Frame-Options': 'DENY',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self'; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'",
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com https://yt3.ggpht.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com; connect-src 'self'; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'",
 };
 function serveStatic(req, res, url) {
   let rel = decodeURIComponent(url.pathname);

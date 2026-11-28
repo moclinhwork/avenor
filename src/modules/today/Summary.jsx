@@ -8,6 +8,7 @@ import { progress } from '../goals/data.js';
 import { finishedIn } from '../books/data.js';
 import { openCapture } from '../ideas/background.js';
 import Briefing from '../life/Briefing.jsx';
+import BusinessCard from '../business/BusinessCard.jsx';
 
 // Phần đầu màn Hôm nay: thu chi tháng và ô tóm tắt các module chính.
 export default function Summary({ state }) {
@@ -44,6 +45,7 @@ export default function Summary({ state }) {
   return (
     <div className="stack" style={{ marginBottom: 14 }}>
       <Briefing />
+      <BusinessCard />
       <section className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
           <div>

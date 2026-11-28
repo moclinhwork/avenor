@@ -14,6 +14,7 @@ import { weekCount } from '../habits/HabitsPage.jsx';
 import { effectiveAll } from '../habits/link.js';
 import { AgendaList } from '../today/TodayPage.jsx';
 import { KINDS } from '../today/data.js';
+import BusinessCard from '../business/BusinessCard.jsx';
 
 const More = ({ to, label = 'Xem' }) => <button className="link" onClick={() => go(to)}>{label}<Icon name="chevR" size={14} /></button>;
 
@@ -71,6 +72,8 @@ export default function OverviewPage() {
       <PageHead title="Tổng quan" subtitle="Cuộc sống, mục tiêu, tài chính và kế hoạch của bạn ở một nơi.">
         <span className="select"><Icon name="cal" size={16} />Tuần {dm(days[0])} – {dmy(days[6])}</span>
       </PageHead>
+
+      <div style={{ marginBottom: 14 }}><BusinessCard /></div>
 
       <div className="grid g4">
         <section className="card" onClick={() => go('health')} style={{ cursor: 'pointer' }}>
