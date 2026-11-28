@@ -29,7 +29,8 @@ export default function HealthPage() {
   const [form, setForm] = useState({ date: todayIso, weight: '', waist: '' });
   const [bpForm, setBpForm] = useState({ date: todayIso, time: nowTime(), sys: '', dia: '', pulse: '' });
   const [hEdit, setHEdit] = useState(null);
-  const [gEdit, setGEdit] = useState(null); // form sửa mục tiêu và chỉ số sinh hiệu
+  const [gEdit, setGEdit] = useState(null);
+  const [bpPage, setBpPage] = useState(0); // trang lịch sử huyết áp, 6 lần đo mỗi trang // form sửa mục tiêu và chỉ số sinh hiệu
 
   // Một lần: chiều cao chuyển sang hồ sơ cơ thể (173,15 cm), thêm huyết áp và tập luyện.
   useEffect(() => {
@@ -105,6 +106,10 @@ export default function HealthPage() {
   const bpLast = bpList[bpList.length - 1];
   const bpCls = bpLast && bpClass(bpLast.sys, bpLast.dia);
   const bpShown = bpList.slice(-14);
+  const BP_PER = 6;
+  const bpPages = Math.max(1, Math.ceil(bpList.length / BP_PER));
+  const bpPg = Math.min(bpPage, bpPages - 1);
+  const bpRows = [...bpList].reverse().slice(bpPg * BP_PER, bpPg * BP_PER + BP_PER);
   const addBp = (e) => {
     e.preventDefault();
     const sys = Math.round(toNum(bpForm.sys)), dia = Math.round(toNum(bpForm.dia)), pulse = Math.round(toNum(bpForm.pulse));
@@ -217,7 +222,7 @@ export default function HealthPage() {
           {bpShown.length >= 2 ? (
             <>
               <LineChart data={bpShown.map((r) => ({ label: dm(r.date), value: r.sys }))} data2={bpShown.map((r) => r.dia)} color="var(--mint)" color2="var(--lav)"
-                refs={[{ value: 120, label: '120' }, { value: 80, label: '80' }]} format={(v) => `${Math.round(v)}`} minPad={4} height={200} />
+                refs={[{ value: 120, label: '120' }, { value: 80, label: '80' }]} format={(v) => `${Math.round(v)}`} minPad={4} height={230} pointLabels />
               <div className="legend" style={{ marginTop: 6 }}>
                 <span><i style={{ background: 'var(--mint)' }} />Tâm thu</span>
                 <span><i style={{ background: 'var(--lav)' }} />Tâm trương</span>
@@ -226,7 +231,7 @@ export default function HealthPage() {
             </>
           ) : <p className="muted">Ghi ít nhất 2 lần đo để xem biểu đồ xu hướng.</p>}
           <div className="list" style={{ marginTop: 12 }}>
-            {[...bpList].reverse().slice(0, 6).map((r) => {
+            {bpRows.map((r) => {
               const c = bpClass(r.sys, r.dia);
               return (
                 <div className="row" key={r.id}>
@@ -237,6 +242,13 @@ export default function HealthPage() {
               );
             })}
           </div>
+          {bpPages > 1 && (
+            <div className="pager">
+              <button className="btn sm ghost" onClick={() => setBpPage(bpPg - 1)} disabled={bpPg === 0}><Icon name="chevL" size={15} />Mới hơn</button>
+              <span>Trang {bpPg + 1}/{bpPages}</span>
+              <button className="btn sm ghost" onClick={() => setBpPage(bpPg + 1)} disabled={bpPg >= bpPages - 1}>Cũ hơn<Icon name="chevR" size={15} /></button>
+            </div>
+          )}
         </Card>
         <div style={{ display: 'grid', gap: 14, alignContent: 'start' }}>
           <Card title="Ghi huyết áp" icon="plus">

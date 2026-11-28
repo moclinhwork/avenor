@@ -1023,3 +1023,8 @@ button.ac-row:hover, .ac-row-btn:hover { background: var(--surface-3); }
 .nt-chips .chip { white-space: normal; }
 .nt-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--mint); text-decoration: none; }
 .icon-btn .count { position: absolute; top: 3px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--rose, #c0392b); color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--bg); box-sizing: content-box; }
+.chart-pt-labels text { font-size: 10px; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pager span { font-size: 13px; color: var(--muted); }
+.pager .btn:disabled { opacity: 0.4; }
+.pager .btn { white-space: nowrap; }

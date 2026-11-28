@@ -132,7 +132,10 @@ export default function Training({ h, set, notify }) {
   const real = workouts.filter((w) => w.source !== 'sample');
   const runWalk = (list, t) => sumKm(list.filter((w) => w.type === t));
   const weekRW = ['run', 'walk'].map((t) => ({ t, km: runWalk(week, t), n: week.filter((w) => w.type === t).length }));
-  const rwSeries = ['run', 'walk'].map((t) => ({ name: SPORTS[t].label, color: SPORTS[t].color, values: weeks.map((w0) => { const end = addDays(w0, 7); return +sumKm(workouts.filter((w) => w.type === t && parse(w.date) >= w0 && parse(w.date) < end)).toFixed(1); }) }));
+  // Km mỗi ngày trong 14 ngày gần nhất (chạy + đi bộ, cột chồng).
+  const days = Array.from({ length: 14 }, (_, i) => addDays(TODAY, i - 13));
+  const daySeries = ['run', 'walk'].map((t) => ({ name: SPORTS[t].label, color: SPORTS[t].color, values: days.map((d) => +sumKm(workouts.filter((w) => w.type === t && w.date === iso(d))).toFixed(1)) }));
+  const dayTotal = daySeries.reduce((s, se) => s + se.values.reduce((a, b) => a + b, 0), 0);
   const recent = [...workouts].sort((a, b) => b.date.localeCompare(a.date) || 0);
   const shown = showAll ? recent.slice(0, 60) : recent.slice(0, 6);
 
@@ -197,8 +200,9 @@ export default function Training({ h, set, notify }) {
         <div><span>Đi bộ · năm</span><b>{num(runWalk(year, 'walk'), 0)} km</b><small>{year.filter((w) => w.type === 'walk').length} buổi</small></div>
       </div>
 
-      <Card title="Km mỗi tuần" icon="trend">
-        <BarChart stacked labels={weeks.map((w) => dm(w))} series={rwSeries} height={170} format={(v) => `${num(v, 1)} km`} />
+      <Card title="Km mỗi ngày" icon="trend" action={<span className="muted" style={{ fontSize: 12.5 }}>14 ngày gần nhất · {num(dayTotal, 1)} km</span>}>
+        <BarChart stacked labels={days.map((d) => String(d.getDate()))} series={daySeries} height={170} format={(v) => `${num(v, 1)} km`} />
+        <div className="faint" style={{ fontSize: 12, marginTop: 2 }}>Ngày {dm(days[0])} – {dm(days[days.length - 1])}</div>
         <div className="legend" style={{ marginTop: 6 }}>{['run', 'walk'].map((t) => <span key={t}><i style={{ background: SPORTS[t].color }} />{SPORTS[t].label}</span>)}</div>
       </Card>
 

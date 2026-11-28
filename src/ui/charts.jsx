@@ -29,10 +29,11 @@ function niceTicks(min, max, count = 4) {
   return ticks;
 }
 
-export function LineChart({ data, height = 190, color = 'var(--mint)', format = (v) => v, yFormat, goal, showDots = true, minPad = 0.4, data2, color2 = 'var(--lav)', refs = [] }) {
+export function LineChart({ data, height = 190, color = 'var(--mint)', format = (v) => v, yFormat, goal, showDots = true, minPad = 0.4, data2, color2 = 'var(--lav)', refs = [], pointLabels = false }) {
   const id = useId().replace(/:/g, '');
   const [ref, W] = useWidth();
-  const H = height, L = 40, R = 14, T = 16, B = 26;
+  // pointLabels: ghi số tại mọi điểm (dòng 1 phía trên, dòng 2 phía dưới), chừa thêm lề trên/dưới cho chữ.
+  const H = height, L = 40, R = 14, T = pointLabels ? 26 : 16, B = pointLabels ? 40 : 26;
   const vals = [...data.map((d) => d.value), ...(data2 || []), ...refs.map((r) => r.value)];
   const lo = Math.min(...vals, goal ?? Infinity) - minPad;
   const hi = Math.max(...vals, goal ?? -Infinity) + minPad;
@@ -72,7 +73,7 @@ export function LineChart({ data, height = 190, color = 'var(--mint)', format = 
       {refs.map((r) => (
         <g key={r.value}>
           <line x1={L} x2={W - R} y1={y(r.value)} y2={y(r.value)} stroke={r.color || 'var(--muted)'} strokeDasharray="4 5" strokeWidth="1.1" opacity="0.8" />
-          <text x={W - R} y={y(r.value) - 5} textAnchor="end" style={{ fill: r.color || 'var(--muted)' }}>{r.label}</text>
+          {!pointLabels && <text x={W - R} y={y(r.value) - 5} textAnchor="end" style={{ fill: r.color || 'var(--muted)' }}>{r.label}</text>}
         </g>
       ))}
       <path d={area} fill={`url(#a${id})`} />
@@ -83,12 +84,21 @@ export function LineChart({ data, height = 190, color = 'var(--mint)', format = 
       {data.map((d, i) => ((i % every === 0 && data.length - 1 - i >= Math.max(1, every * 0.6)) || i === data.length - 1) && (
         <text key={i} x={x(i)} y={H - 6} textAnchor="middle">{d.label}</text>
       ))}
-      <circle cx={last[0]} cy={last[1]} r="9" fill={color} opacity="0.18" />
-      <circle cx={last[0]} cy={last[1]} r="4.5" fill={color} />
-      <g transform={`translate(${Math.min(last[0], W - R - 34)}, ${last[1] - 30})`}>
-        <rect x="-34" y="0" width="68" height="22" rx="7" fill={color} />
-        <text x="0" y="15" textAnchor="middle" style={{ fill: 'var(--on-accent)', fontWeight: 700 }}>{format(data[data.length - 1].value)}</text>
-      </g>
+      {pointLabels ? (
+        <g className="chart-pt-labels">
+          {pts.map((p, i) => <text key={`l${i}`} x={p[0]} y={p[1] - 8} textAnchor="middle" style={{ fill: color, fontWeight: 700 }}>{format(data[i].value)}</text>)}
+          {pts2 && pts2.map((p, i) => <text key={`m${i}`} x={p[0]} y={p[1] + 15} textAnchor="middle" style={{ fill: color2, fontWeight: 700 }}>{format(data2[i])}</text>)}
+        </g>
+      ) : (
+        <>
+          <circle cx={last[0]} cy={last[1]} r="9" fill={color} opacity="0.18" />
+          <circle cx={last[0]} cy={last[1]} r="4.5" fill={color} />
+          <g transform={`translate(${Math.min(last[0], W - R - 34)}, ${last[1] - 30})`}>
+            <rect x="-34" y="0" width="68" height="22" rx="7" fill={color} />
+            <text x="0" y="15" textAnchor="middle" style={{ fill: 'var(--on-accent)', fontWeight: 700 }}>{format(data[data.length - 1].value)}</text>
+          </g>
+        </>
+      )}
     </svg>
     </div>
   );
@@ -121,8 +131,9 @@ export function BarChart({ labels, series, height = 200, format = (v) => v, stac
             {series.map((se, k) => {
               const v = se.values[i];
               if (stacked) {
-                const yTop = y(acc + v), yBot = y(acc); acc += v;
-                return <rect key={k} x={cx - barW / 2} y={yTop} width={barW} height={Math.max(0, yBot - yTop - (k ? 2 : 0))} rx="4" fill={se.color} />;
+                if (!v) return null;
+                const yTop = y(acc + v), yBot = y(acc); const gap = acc > 0 ? 2 : 0; acc += v;
+                return <rect key={k} x={cx - barW / 2} y={yTop} width={barW} height={Math.max(0, yBot - yTop - gap)} rx="4" fill={se.color} />;
               }
               const bx = cx - (series.length * (barW + 3)) / 2 + k * (barW + 3) + 1.5;
               const h = Math.max(0, y(0) - y(v));
